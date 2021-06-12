@@ -1,0 +1,214 @@
+:root{
+	--background: #fff;
+	--border: #ccc;
+	--text: #000;
+	--text-alt: #fff;
+	--shadow: #ccc;
+
+	--primary-medium: #ff6400;
+	--primary-dark: #904800;
+	--complimentary-medium: blue;
+	--complimentary-dark: darkblue;
+	--warn-medium: #904800;
+	--warn-light: #fbdda3;
+	--negative-medium: #cc0000;
+	--negative-light:  #ffebeb;
+	--info-medium: #0000cc;
+	--info-light: #d9dbff;
+	--positive-medium: #008000;
+	--positive-light: #e2ffd9;
+
+	--checker: linear-gradient(45deg, #eee 25%, transparent 25%),
+	  linear-gradient(-45deg, #eee 25%, transparent 25%),
+	  linear-gradient(45deg, transparent 75%, #eee 75%),
+      linear-gradient(-45deg, transparent 75%, #eee 75%);
+}
+
+@media (prefers-color-scheme: dark){
+	:root {
+		--background: #333;
+		--border: #666;
+		--text: #fff;
+		--shadow: #111;
+	}
+	:root a {
+		color: var(--primary-medium);
+	}
+	:root .text-button {
+		color: var(--primary-medium);
+	}
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+	position: relative;
+}
+*:not(:defined){
+	display: block;
+	visibility: hidden;
+}
+body,html {
+	margin : 0;
+	padding: 0;
+	font-family: arial;
+	font-size: 100%;
+	background-color: var(--background);
+	color: var(--text);
+	block-size: 100%;
+}
+label, button, textarea, input {
+	display: block;
+}
+h1,h2,h3,h4,h5,h6{
+	margin: 0;
+}
+button {
+	margin: 0;
+	font-size: 1rem;
+}
+ul, ol {
+	padding: 0;
+	margin: 0;
+}
+li {
+	list-style: none;
+}
+fieldset {
+	border: none;
+	margin-bottom: 0 0 1rem 0;
+} 
+section {
+	margin: 0 0 1rem 0;
+}
+a {
+	color: var(--complimentary-medium);
+}
+input[type='text'],
+input[type='password'],
+input[type='url'],
+input[type='search'],
+input[type='number'],
+input[type='color'],
+input[type='datetime'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='time'],
+input[type='email'],
+input[type='tel'] {
+	color: var(--text);
+	block-size: 2rem;
+	border: 1px solid var(--border);
+	background-color: var(--background);
+}
+textarea {
+	color: var(--text);
+	block-size: 20rem;
+	border: 1px solid var(--border);
+	background-color: var(--background);
+	font-family: arial;
+}
+dialog{
+	position: fixed;
+	inline-size: 50%;
+	block-size: 50%;
+	background: #ffffff;
+	top: 25%;
+	box-shadow: 0px 0px 0px 1000px rgba(0, 0, 0, 0.5);
+	z-index: 1;
+	border: none;
+	border-radius: 0.5rem;
+}
+button {
+	background: var(--primary-medium);
+	border: none;
+	border-radius: 0.3125rem;
+	padding: 0.5rem;
+	color: var(--text-alt);
+	cursor: pointer;
+	margin-inline-end: 0.5rem;
+}
+button:hover {
+	background: var(--primary-dark);
+}
+button.toggle {
+	position: relative;
+	border-radius: 1rem;
+	inline-size: 4rem;
+	block-size: 2rem;
+	border: 1px solid var(--border);
+	padding: 0;
+	background: var(--complimentary-medium);
+	transition: 0.25s;
+}
+button.toggle::after {
+	content: "";
+	display: block;
+	border-radius: 1rem;
+	inline-size: 2rem;
+	block-size: calc(2rem - 2px);
+	border: 1px solid var(--border);
+	background: var(--background);
+	position: absolute;
+	top: 0;
+	left: 0;
+}
+button.toggle.on {
+	border: 1px solid var(--border);
+	background-color: var(--negative-medium)
+}
+button.toggle.on::after{
+	transform: translateX(2rem);
+}
+
+button.toggled:hover {
+	background: var(--complimentary-dark);
+}
+button.text-button {
+	background: none;
+	color: var(--complimentary-medium);
+}
+.hidden {
+	display: none !important;
+}
+.row{
+	display: flex;
+	flex-flow: row nowrap;
+	justify-content: flex-start;
+	align-items: center;
+}
+.stack{
+	display: flex;
+	flex-flow: column nowrap;
+	justify-content: flex-start;
+	align-items: center;
+}
+.error {
+	color: var(--negative-medium);
+	background: var(--negative-light);
+	border: 1px solid var(--negative-medium);
+	padding: 0.5rem;
+	margin-block-end: 1rem;
+}
+.success {
+	color: var(--positive-medium);
+	background: var(--positive-light);
+	border: 1px solid var(--positive-medium);
+	padding: 0.5rem;
+	margin-block-end: 1rem;
+}
+.warn {
+	color: var(--warn-medium);
+	background: var(--warn-light);
+	border: 1px solid var(--warn-medium);
+	padding: 0.5rem;
+	margin-block-end: 1rem;
+}
+.info {
+	color: var(--info-medium);
+	background: var(--info-light);
+	border: 1px solid var(--info-medium);
+	padding: 0.5rem;
+	margin-block-end: 1rem;
+}

@@ -1,0 +1,134 @@
+<!doctype html>
+<html>
+
+<head>
+	<title>geogl Style Guide</title>
+	<link rel="manifest" href="../manifest.json">
+	<link rel="stylesheet" href="../css/system.css">
+	<meta charset="utf-8" />
+	<link rel="icon" href="../img/icon32x32.png" type="image/png">
+	<link rel="apple-touch-icon" href="img/icon.png">
+	<meta charset="utf-8">
+	<meta name="theme-color" content="#ff6400">
+	<meta name="viewport" content="width=device-width">
+	<meta name="description" content="A Web app">
+</head>
+
+<body lang="en">
+	<h1>Hello</h1>
+	<h2>Hello</h2>
+	<h3>Hello</h3>
+	<h4>Hello</h4>
+	<h5>Hello</h5>
+	<h6>Hello</h6>
+
+	<p>sphinx of black quartz judge my vow!</p>
+
+	<div>
+		<a href="#">Link</a>
+	</div>
+	<fieldset>
+		<label>Button (Opens Dialog)</label>
+		<button id="button">Button</button>
+	</fieldset>
+	<fieldset>
+		<label>Toggle Button States</label>
+		<button class="toggle"></button>
+		<button class="toggle on"></button>
+	</fieldset>
+	<fieldset>
+		<button class="text-button">Text Button</button>
+	</fieldset>
+	<fieldset>
+		<label>Text</label>
+		<input type="text">
+	</fieldset>
+	<fieldset>
+		<label>Email</label>
+		<input type="email">
+	</fieldset>
+	<fieldset>
+		<label>Telephone</label>
+		<input type="tel">
+	</fieldset>
+	<fieldset>
+		<label>Password</label>
+		<input type="password">
+	</fieldset>
+	<fieldset>
+		<label>DateTime</label>
+		<input type="datetime">
+	</fieldset>
+	<fieldset>
+		<label>DateTime (Local)</label>
+		<input type="datetime-local">
+	</fieldset>
+	<fieldset>
+		<label>Month</label>
+		<input type="month">
+	</fieldset>
+	<fieldset>
+		<label>Time</label>
+		<input type="time">
+	</fieldset>
+	<fieldset>
+		<label>Color</label>
+		<input type="color">
+	</fieldset>
+	<fieldset>
+		<label>Number</label>
+		<input type="number">
+	</fieldset>
+	<fieldset>
+		<label>Range</label>
+		<input type="range">
+	</fieldset>
+	<fieldset>
+		<label>URL</label>
+		<input type="url">
+	</fieldset>
+	<fieldset>
+		<label>File</label>
+		<input type="file">
+	</fieldset>
+	<fieldset>
+		<label>Checkbox</label>
+		<input type="checkbox">
+	</fieldset>
+	<fieldset>
+		<label>Radio</label>
+		<input type="radio">
+	</fieldset>
+	<fieldset>
+		<label>Time</label>
+		<textarea>Some Text</textarea>
+	</fieldset>
+	<dialog>
+		<button class="text-button" id="dialog-close" style="position: absolute; top: 0; right: 0; margin: 0">
+			<svg height="16" width="16">
+				<line x1="0" y1="0" x2="16" y2="16" stroke="black" stroke-width="4" />
+				<line x1="0" y1="16" x2="16" y2="0" stroke="black" stroke-width="4" />
+			</svg>
+		</button>
+		<p>Some Dialog</p>
+	</dialog>
+
+	<div class="info">Some info for you!</div>
+	<div class="warn">You sure about that?</div>
+	<div class="error">You shouldn't have done that!</div>
+	<div class="success">That worked!</div>
+
+	<!--<service-worker url="service-worker.js" scope="./"></service-worker>-->
+	<script src="../js/components/service-worker.js" type="module"></script>
+	<script>
+		const dialog = document.querySelector("dialog");
+		document.querySelector("#button").addEventListener("click", () => {
+			dialog.show();
+		});
+		document.querySelector("#dialog-close").addEventListener("click", () => {
+			dialog.close();
+		});
+	</script>
+</body>
+
+</html>
