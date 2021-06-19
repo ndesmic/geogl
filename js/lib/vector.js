@@ -11,6 +11,15 @@ export function getProjectionMatrix(screenHeight, screenWidth, fieldOfView, zNea
 	];
 }
 
+export function getOrthoMatrix(left, right, bottom, top, near, far) {
+	return [
+		[2 / (right - left), 0, 0,  -(right + left) / (right - left)],
+		[0, 2 / (top - bottom), 0, -(top + bottom) / (top - bottom)],
+		[0, 0, -2 / (near - far), -(near + far) / (near - far)],
+		[0, 0, 0, 1]
+	];
+}
+
 export function transpose(matrix){
 	return [
 		[matrix[0][0], matrix[1][0], matrix[2][0], matrix[3][0]],
@@ -131,7 +140,11 @@ export function multiplyMatrixVector(vector, matrix) {
 }
 
 export function getVectorMagnitude(vec) {
-	return Math.sqrt(vec[0] ** 2 + vec[1] ** 2 + vec[2] ** 2);
+	let sum = 0;
+	for(const el of vec){
+		sum += el ** 2;
+	}
+	return Math.sqrt(sum);
 }
 
 export function addVector(a, b) {

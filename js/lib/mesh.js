@@ -9,11 +9,9 @@ export class Mesh {
 
 	#textureName;
 
-	#translation = [0, 0, 0];
-	#scale = [1, 1, 1];
-	#rotation = [0, 0, 0];
+	#modelMatrix = getIdentityMatrix();
 
-	constructor(mesh){
+	constructor(mesh) {
 		this.positions = mesh.positions;
 		this.colors = mesh.colors;
 		this.normals = mesh.normals;
@@ -22,100 +20,66 @@ export class Mesh {
 		this.textureName = mesh.textureName;
 	}
 
-	set positions(val){
+	set positions(val) {
 		this.#positions = new Float32Array(val);
 	}
-	get positions(){
+	get positions() {
 		return this.#positions;
 	}
 	set colors(val) {
 		this.#colors = new Float32Array(val);
 	}
-	get colors(){
+	get colors() {
 		return this.#colors;
 	}
 	set normals(val) {
 		this.#normals = new Float32Array(val);
 	}
-	get normals(){
+	get normals() {
 		return this.#normals;
 	}
 	set uvs(val) {
 		this.#uvs = new Float32Array(val);
 	}
-	get uvs(){
+	get uvs() {
 		return this.#uvs;
 	}
-	get textureName(){
+	get textureName() {
 		return this.#textureName;
 	}
-	set textureName(val){
+	set textureName(val) {
 		this.#textureName = val;
 	}
 	set triangles(val) {
 		this.#triangles = new Uint16Array(val);
 	}
-	get triangles(){
+	get triangles() {
 		return this.#triangles;
 	}
-	setTranslation({ x, y, z }){
-		if (x){
-			this.#translation[0] = x;
-		}
-		if (y) {
-			this.#translation[1] = y;
-		}
-		if (z) {
-			this.#translation[2] = z;
-		}
+	setTranslation({ x = 0, y = 0, z = 0 }) {
+		this.#modelMatrix = multiplyMatrix(getTranslationMatrix(x, y, z), this.#modelMatrix);
+		return this;
 	}
-	getTranslation(){
-		return this.#translation;
-	}
-	setScale({ x, y, z }) {
-		if (x) {
-			this.#scale[0] = x;
-		}
-		if (y) {
-			this.#scale[1] = y;
-		}
-		if (z) {
-			this.#scale[2] = z;
-		}
-	}
-	getScale() {
-		return this.#scale;
+	setScale({ x = 1, y = 1, z = 1 }) {
+		this.#modelMatrix = multiplyMatrix(getScaleMatrix(x, y, z), this.#modelMatrix);
+		return this;
 	}
 	setRotation({ x, y, z }) {
 		if (x) {
-			this.#rotation[0] = x;
+			this.#modelMatrix = multiplyMatrix(getRotationXMatrix(x), this.#modelMatrix);
 		}
 		if (y) {
-			this.#rotation[1] = y;
+			this.#modelMatrix = multiplyMatrix(getRotationYMatrix(y), this.#modelMatrix);
 		}
 		if (z) {
-			this.#rotation[2] = z;
+			this.#modelMatrix = multiplyMatrix(getRotationZMatrix(z), this.#modelMatrix);
 		}
+		return this;
 	}
-	getRotation(){
-		return this.#rotation;
+	resetTransforms() {
+		this.#modelMatrix = getIdentityMatrix();
 	}
-	getModelMatrix(){
-		return new Float32Array(transpose(multiplyMatrix(
-			getTranslationMatrix(this.#translation[0], this.#translation[1], this.#translation[2]),
-				multiplyMatrix(
-					getRotationXMatrix(this.#rotation[0]),
-					multiplyMatrix(
-						getRotationYMatrix(this.#rotation[1]),
-						multiplyMatrix(
-							getRotationZMatrix(this.#rotation[2]),
-							multiplyMatrix(
-								getScaleMatrix(this.#scale[0], this.#scale[1], this.#scale[2]),
-								getIdentityMatrix()
-							)
-						)
-					)
-				)
-			)).flat());
+	getModelMatrix() {
+		return transpose(this.#modelMatrix).flat();
 	}
 }
