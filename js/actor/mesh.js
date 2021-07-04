@@ -1,4 +1,4 @@
-import { multiplyMatrix, getIdentityMatrix, getTranslationMatrix, getScaleMatrix, getRotationXMatrix, getRotationYMatrix, getRotationZMatrix, transpose } from "./vector.js";
+import { multiplyMatrix, getIdentityMatrix, getTranslationMatrix, getScaleMatrix, getRotationXMatrix, getRotationYMatrix, getRotationZMatrix, transpose } from "../lib/vector.js";
 
 export class Mesh {
 	#positions;

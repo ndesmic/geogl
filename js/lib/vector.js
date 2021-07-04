@@ -195,6 +195,10 @@ export function dotVector(a, b) {
 	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
+export function invertVector(vec){
+	return vec.map(x => -x);
+}
+
 ///
 export function getVectorIntersectPlane(planePoint, planeNormal, lineStart, lineEnd) {
 	planeNormal = normalizeVector(planeNormal);

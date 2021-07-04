@@ -1,5 +1,5 @@
-import { getOrthoMatrix, getProjectionMatrix, getLookAtMatrix, UP, subtractVector } from "./vector.js";
-import { cartesianToLatLng, latLngToCartesian } from "./trig.js";
+import { getOrthoMatrix, getProjectionMatrix, getLookAtMatrix, UP, subtractVector } from "../lib/vector.js";
+import { cartesianToLatLng, latLngToCartesian, clamp } from "../lib/math-helpers.js";
 
 export class Camera {
 	#position = [0,0,-1];
@@ -57,7 +57,8 @@ export class Camera {
 
 	orbitBy({ lat = 0, long = 0 }){
 		const [r, currentLat, currentLng] = this.getOrbit(); 
-		this.#position = latLngToCartesian([r, currentLat + lat, currentLng - long]);
+		const newLat = clamp(currentLat + lat, -Math.PI/2, Math.PI/2);
+		this.#position = latLngToCartesian([r, newLat, currentLng - long]);
 	}
 
 	lookAt(x, y, z){

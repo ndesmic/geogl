@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node ./test/trig.test.js",
     "start": "npx http-server -o -c-1"
   },
   "repository": {
@@ -19,5 +19,6 @@
   "bugs": {
     "url": "https://github.com/undefined/geogl/issues"
   },
+  "type": "module",
   "homepage": "https://github.com/undefined/geogl#readme"
 }

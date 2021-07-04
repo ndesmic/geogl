@@ -1,7 +1,9 @@
-import { Mesh } from "../lib/mesh.js";
+import { Mesh } from "../actor/mesh.js";
 import { cube, quadPyramid, quad } from "../data.js";
+import { sphere } from "../lib/shape-gen.js";
 import { compileShader, compileProgram, loadImage } from "../lib/gl-helpers.js";
-import { Camera } from "../lib/camera.js";
+import { Camera } from "../actor/camera.js";
+import { Light } from "../actor/light.js";
 
 const degreesPerRad = 180 / Math.PI;
 
@@ -13,6 +15,14 @@ export class WcGeoGl extends HTMLElement {
 	//on manipulation
 	#initialPointer;
 	#initialCameraPos;
+
+	//animation
+	#frameCount = 0;
+
+	//recording
+	#recording;
+	#mediaRecorder;
+	#recordedChunks;
 
 	constructor() {
 		super();
@@ -38,8 +48,9 @@ export class WcGeoGl extends HTMLElement {
 		await this.bootGpu();
 		this.createCameras();
 		this.createMeshes();
+		this.createLights();
 		await this.loadTextures();
-		this.render();
+		this.renderLoop();
 	}
 	createShadowDom() {
 		this.shadow = this.attachShadow({ mode: "open" });
@@ -73,26 +84,34 @@ export class WcGeoGl extends HTMLElement {
 				attribute vec3 aVertexPosition;
 				attribute vec3 aVertexColor;
 				attribute vec2 aVertexUV;
+				attribute vec3 aVertexNormal;
 
 				varying mediump vec4 vColor;
 				varying mediump vec2 vUV;
+				varying mediump vec3 vNormal;
 
 				void main(){
 					gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aVertexPosition, 1.0);
-					vColor = vec4(aVertexColor, 1.0);
 					vUV = aVertexUV;
+					vColor = vec4(aVertexColor, 1.0);
+					vNormal = aVertexNormal;
 				}
 			`, this.context.VERTEX_SHADER);
 
 		const fragmentShader = compileShader(this.context, `
 		    varying lowp vec4 vColor;
 			varying lowp vec2 vUV;
+			varying lowp vec3 vNormal;
+
+			uniform lowp mat4 uLight1;
 
 			uniform sampler2D uSampler;
 
 			void main() {
-				//gl_FragColor = texture2D(uSampler, vUV);
-				gl_FragColor = vColor;
+				//mediump float light = dot(vNormal, uLight1[1].xyz);
+				//gl_FragColor = vec4(light, light, light, 1);
+				//gl_FragColor = vColor;
+				gl_FragColor = texture2D(uSampler, vUV);
 			}
 		`, this.context.FRAGMENT_SHADER);
 
@@ -109,14 +128,13 @@ export class WcGeoGl extends HTMLElement {
 			plus: this.createTexture(await loadImage("./img/plus.png")),
 			grass: this.createTexture(await loadImage("./img/grass.jpg")),
 			smile: this.createTexture(await loadImage("./img/smile.png")),
+			earth: this.createTexture(await loadImage("./img/earth.png")),
 		};
 	}
 
 	createMeshes(){
-		const tcube = new Mesh(cube);
-
 		this.meshes = {
-			cube: tcube,		
+			sphere : new Mesh(sphere(20))
 		};
 	}
 
@@ -132,13 +150,23 @@ export class WcGeoGl extends HTMLElement {
 				isPerspective: true
 			})
 		}
-		console.log("Orbit i", this.cameras.default.getOrbit());
+	}
+
+	createLights(){
+		this.lights = [
+			new Light({
+				type: "spot",
+				direction: [0,0,1],
+				color: [1,1,1,1]
+			})
+		]
 	}
 
 	bindMesh(mesh){
 		this.bindPositions(mesh.positions);
 		this.bindColors(mesh.colors);
 		this.bindUvs(mesh.uvs);
+		this.bindNormals(mesh.normals);
 		this.bindIndices(mesh.triangles);
 		this.bindUniforms(mesh.getModelMatrix());
 		this.bindTexture(mesh.textureName);
@@ -174,6 +202,16 @@ export class WcGeoGl extends HTMLElement {
 		this.context.enableVertexAttribArray(vertexUvLocation);
 		this.context.vertexAttribPointer(vertexUvLocation, 2, this.context.FLOAT, false, 0, 0);
 	}
+	bindNormals(normals) {
+		const normalsBuffer = this.context.createBuffer();
+		this.context.bindBuffer(this.context.ARRAY_BUFFER, normalsBuffer);
+
+		this.context.bufferData(this.context.ARRAY_BUFFER, normals, this.context.STATIC_DRAW);
+
+		const vertexNormalLocation = this.context.getAttribLocation(this.program, "aVertexNormal");
+		this.context.enableVertexAttribArray(vertexNormalLocation);
+		this.context.vertexAttribPointer(vertexNormalLocation, 3, this.context.FLOAT, false, 0, 0);
+	}
 	bindIndices(indices) {
 		const indexBuffer = this.context.createBuffer();
 		this.context.bindBuffer(this.context.ELEMENT_ARRAY_BUFFER, indexBuffer);
@@ -196,6 +234,10 @@ export class WcGeoGl extends HTMLElement {
 		const viewMatrix = this.cameras.default.getViewMatrix();
 		const viewLocation = this.context.getUniformLocation(this.program, "uViewMatrix");
 		this.context.uniformMatrix4fv(viewLocation, false, viewMatrix);
+
+		const light1Matrix = this.lights[0].getInfoMatrix();
+		const light1Location = this.context.getUniformLocation(this.program, "uLight1");
+		this.context.uniformMatrix4fv(light1Location, false, light1Matrix);
 	}
 	createTexture(image) {
 		const texture = this.context.createTexture();
@@ -210,10 +252,25 @@ export class WcGeoGl extends HTMLElement {
 
 		return texture;
 	}
+	renderLoop(){
+		requestAnimationFrame(() => {
+			this.render();
+			this.renderLoop();
+		});
+	}
 	render() {
 		this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
 		this.setupGlobalUniforms();
+
 		for (const mesh of Object.values(this.meshes)){
+			
+			mesh.setRotation({ y: Math.PI / 500 });
+			//if(this.#frameCount === 0){
+			//	this.toggleRecord();
+			//} else if(this.#frameCount === 1000){
+			//	this.toggleRecord();
+			//}
+			this.#frameCount++
 			this.bindMesh(mesh);
 			this.context.drawElements(this.context.TRIANGLES, mesh.triangles.length, this.context.UNSIGNED_SHORT, 0);
 		}
@@ -239,7 +296,6 @@ export class WcGeoGl extends HTMLElement {
 				break;
 			}
 		}
-		this.render();
 	}
 
 	onPointerDown(e){
@@ -268,30 +324,29 @@ export class WcGeoGl extends HTMLElement {
 
 		this.cameras.default.setPosition(this.#initialCameraPos);
 		this.cameras.default.orbitBy({ long: xRads, lat: yRads });
-		this.render();
 	}
 
 	toggleRecord(e){
-		this.recording = !this.recording;
+		this.#recording = !this.#recording;
 
-		if(this.recording){
+		if(this.#recording){
 			this.dom.record.textContent = "Stop";
 			const stream = this.dom.canvas.captureStream(25);
-			this.mediaRecorder = new MediaRecorder(stream, {
+			this.#mediaRecorder = new MediaRecorder(stream, {
 				mimeType: 'video/webm;codecs=vp9'
 			});
-			this.recordedChunks = [];
-			this.mediaRecorder.ondataavailable = e => {
+			this.#recordedChunks = [];
+			this.#mediaRecorder.ondataavailable = e => {
 				if(e.data.size > 0){
-					this.recordedChunks.push(e.data);
+					this.#recordedChunks.push(e.data);
 				}
 			};
-			this.mediaRecorder.start();
+			this.#mediaRecorder.start();
 		} else {
 			this.dom.record.textContent = "Record"
-			this.mediaRecorder.stop();
+			this.#mediaRecorder.stop();
 			setTimeout(() => {
-				const blob = new Blob(this.recordedChunks, {
+				const blob = new Blob(this.#recordedChunks, {
 					type: "video/webm"
 				});
 				const url = URL.createObjectURL(blob);
@@ -302,7 +357,6 @@ export class WcGeoGl extends HTMLElement {
 				URL.revokeObjectURL(url);
 			},0);
 		}
-
 	}
 
 	//Attrs

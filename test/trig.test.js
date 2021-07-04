@@ -1,26 +1,29 @@
-import { cartesianToLatLng, latLngToCartesian } from "../js/lib/trig.js";
+import { deepStrictEqual } from "assert";
+import { cartesianToLatLng, latLngToCartesian, normalizeNumber } from "../js/lib/math-helpers.js";
 
-console.log(cartesianToLatLng([1, 0, 0]));
-console.log(cartesianToLatLng([0, 1, 0]));
-console.log(cartesianToLatLng([0, 0, 1]));
+function normalizeLatLng(latlng){
+	return [normalizeNumber(latlng[0], 2), normalizeNumber(latlng[1] / Math.PI), normalizeNumber(latlng[2] / Math.PI)];
+}
 
-console.log(cartesianToLatLng([-1, 0, 0]));
-console.log(cartesianToLatLng([0, -1, 0]));
-console.log(cartesianToLatLng([0, 0, -1]));
+function normalizeCartesian(cart){
+	return cart.map(p => normalizeNumber(p, 2));
+}
 
-console.log(cartesianToLatLng([1, 1, 0]));
-console.log(cartesianToLatLng([1, 0, 1]));
-console.log(cartesianToLatLng([0, 1, 1]));
-
-console.log("UNDO")
-console.log(latLngToCartesian(cartesianToLatLng([1, 0, 0])));
-console.log(latLngToCartesian(cartesianToLatLng([0, 1, 0])));
-console.log(latLngToCartesian(cartesianToLatLng([0, 0, 1])));
-
-console.log(latLngToCartesian(cartesianToLatLng([-1, 0, 0])));
-console.log(latLngToCartesian(cartesianToLatLng([0, -1, 0])));
-console.log(latLngToCartesian(cartesianToLatLng([0, 0, -1])));
-
-console.log(latLngToCartesian(cartesianToLatLng([1, 1, 0])));
-console.log(latLngToCartesian(cartesianToLatLng([1, 0, 1])));
-console.log(latLngToCartesian(cartesianToLatLng([0, 1, 1])));
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([1, 0, 0])), [1,0,1]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([0, 1, 0])), [1,1,1]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([0, 0, 1])), [1,0,1]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([-1, 0, 0])), [1,0,2]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([0, -1, 0])), [1,-1,1]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([0, 0, -1])), [1,0,0]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([1, 1, 0])), [1.41,0,1]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([1, 0, 1])), [1.41,0,1]);
+deepStrictEqual(normalizeLatLng(cartesianToLatLng([0, 1, 1])), [1.41,0,1]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([1, 0, 0]))), [1,0,0]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([0, 1, 0]))), [0,1,0]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([0, 0, 1]))), [0,0,1]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([-1, 0, 0]))), [-1,0,0]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([0, -1, 0]))), [0,-1,0]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([0, 0, -1]))), [0,0,-1]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([1, 1, 0]))), [1,1,0]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([1, 0, 1]))), [1,0,1]);
+deepStrictEqual(normalizeCartesian(latLngToCartesian(cartesianToLatLng([0, 1, 1]))), [0,1,1]);
