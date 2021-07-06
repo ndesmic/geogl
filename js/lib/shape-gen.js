@@ -1,12 +1,14 @@
+import { arrayChunk } from "./array-helper.js";
 import { latLngToCartesian, inverseLerp, TWO_PI, QUARTER_TURN } from "./math-helpers.js";
+import { triangleNormal } from "./vector.js";
 
-export function sphere(density){
+export function uvSphere(density, { color, uvOffset } = {}){
 	const radsPerUnit = Math.PI / density;
 	const sliceVertCount = density * 2;
 
 	//positions and UVs
 	const positions = [];
-	const uvs = [];
+	let uvs = [];
 	let latitude = -Math.PI / 2;
 	//latitude
 	for(let i = 0; i <= density; i++){
@@ -22,10 +24,14 @@ export function sphere(density){
 		latitude += radsPerUnit;
 	}
 
+	if(uvOffset){
+		uvs = uvs.map(uv => [(uv[0] + uvOffset[0]) % 1, (uv[1] + uvOffset[1]) % 1]);
+	}
+
 	//colors
 	const colors = [];
 	for(let i = 0; i < positions.length; i++){
-		colors.push([1, 1, 0]);
+		colors.push(color ?? [1,0,0]);
 	}
 
 	//triangles
@@ -66,4 +72,39 @@ export function sphere(density){
 		normals: positions.flat(),
 		textureName: "earth"
 	};
+}
+
+export function facetSphere(density, options){
+	const sphere = uvSphere(density, options);
+
+	const rawTriangles = arrayChunk(sphere.triangles, 3);
+	const rawPositions = arrayChunk(sphere.positions, 3);
+	const rawUVs = arrayChunk(sphere.uvs, 2);
+	const rawColors = arrayChunk(sphere.colors, 3);
+
+	const positions = [];
+	const uvs = [];
+	const normals = [];
+	const colors = [];
+	const triangles = [];
+	let index = 0;
+
+	for(const tri of rawTriangles){
+		positions.push(rawPositions[tri[0]], rawPositions[tri[1]], rawPositions[tri[2]]);
+		uvs.push(rawUVs[tri[0]], rawUVs[tri[1]], rawUVs[tri[2]]);
+		colors.push(rawColors[tri[0]], rawColors[tri[1]], rawColors[tri[2]]);
+		const normal = triangleNormal(rawPositions[tri[0]], rawPositions[tri[1]], rawPositions[tri[2]]);
+		normals.push(normal, normal, normal);
+		triangles.push([index, index + 1, index + 2]);
+		index += 3;
+	}
+
+	return {
+		positions: positions.flat(),
+		colors: colors.flat(),
+		triangles: triangles.flat(),
+		uvs: uvs.flat(),
+		normals: normals.flat(),
+		textureName: sphere.textureName
+	}
 }

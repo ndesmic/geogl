@@ -222,3 +222,10 @@ export function isPointInInsideSpace(point, planeNormal, planePoint) {
 export const UP = [0, 1, 0];
 export const FORWARD = [0, 0, 1];
 export const RIGHT = [1, 0, 0];
+
+//order matters! CCW from bottom to top
+export function triangleNormal(pointA, pointB, pointC){
+	const vector1 = subtractVector(pointC, pointA);
+	const vector2 = subtractVector(pointB, pointA);
+	return normalizeVector(crossVector(vector1, vector2));
+}

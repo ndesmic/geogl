@@ -1,8 +1,8 @@
 import { deepStrictEqual } from "assert";
 import { normalizeNumber } from "../js/lib/math-helpers.js";
-import { sphere } from "../js/lib/shape-gen.js";
+import { uvSphere, facetSphere } from "../js/lib/shape-gen.js";
 
-const two = sphere(2);
+const two = uvSphere(2);
 deepStrictEqual(two.positions.map(p => normalizeNumber(p, 2)), [
 	0, -1, 0,
 	0, -1, 0,
@@ -45,7 +45,7 @@ deepStrictEqual(two.uvs.map(uv => normalizeNumber(uv, 2)), [
 ], "uvs did not match for density 2");
 
 
-const three = sphere(3);
+const three = uvSphere(3);
 deepStrictEqual(three.positions.map(p => normalizeNumber(p, 2)), [
 	0, -1, 0,
 	0, -1, 0,
@@ -128,3 +128,109 @@ deepStrictEqual(three.uvs.map(uv => normalizeNumber(uv, 2)), [
 	0.67, 0.00, 
 	0.83, 0.00
 ], "uvs did not match for density 3");
+
+const facetSphereTwo = facetSphere(2);
+
+deepStrictEqual(facetSphereTwo.positions.map(p => normalizeNumber(p, 2)), [
+	0, -1, 0,
+	1, 0, 0,
+	0, 0, -1,
+
+	0, -1, 0,
+	0, 0, 1,
+	1, 0, 0,
+
+	0, -1, 0,
+	-1, 0, 0,
+	0, 0, 1,
+
+	0, -1, 0,
+	0, 0, -1,
+	-1, 0, 0,
+	
+	0, 0, -1,
+	1, 0, 0,
+	0, 1, 0,
+
+	1, 0, 0,
+	0, 0, 1,
+	0, 1, 0,
+
+	0,0,1,
+	-1,0,0,
+	0,1,0,
+	
+	-1, 0, 0,
+	0, 0, -1,
+	0, 1, 0
+], "positions did not match for density 2");
+deepStrictEqual(facetSphereTwo.triangles, [
+	0, 1, 2,
+	3, 4, 5,
+	6, 7, 8,
+	9, 10, 11,
+	12, 13, 14,
+	15, 16, 17,
+	18, 19, 20,
+	21, 22, 23
+], "triangles did not match for density 2");
+deepStrictEqual(facetSphereTwo.uvs.map(uv => normalizeNumber(uv, 2)), [
+	0, 1,
+	0.25, 0.5,
+	0, 0.5,
+
+	0.25, 1,
+	0.5, 0.5,
+	0.25, 0.5,
+
+	0.5, 1,
+	0.75, 0.5,
+	0.5, 0.5,
+
+	0.75, 1,
+	1, 0.5,
+	0.75, 0.5,
+
+	0, 0.5,
+	0.25, 0.5,
+	0, 0,
+
+	0.25, 0.5,
+	0.5, 0.5,
+	0.25, 0,
+
+	0.5, 0.5,
+	0.75, 0.5,
+	0.5, 0,
+
+	0.75, 0.5,
+	1, 0.5,
+	0.75, 0
+], "uvs did not match for density 2");
+
+deepStrictEqual(facetSphereTwo.normals.map(n => normalizeNumber(n, 2)), [
+	0.58, -0.58, -0.58, 
+	0.58, -0.58, -0.58, 
+	0.58, -0.58, -0.58, 
+	0.58, -0.58, 0.58, 
+	0.58, -0.58, 0.58, 
+	0.58, -0.58, 0.58, 
+	-0.58, -0.58, 0.58,
+	-0.58, -0.58, 0.58, 
+	-0.58, -0.58, 0.58, 
+	-0.58, -0.58, -0.58, 
+	-0.58, -0.58, -0.58, 
+	-0.58, -0.58, -0.58, 
+	0.58, 0.58, -0.58, 
+	0.58, 0.58, -0.58, 
+	0.58, 0.58, -0.58, 
+	0.58, 0.58, 0.58, 
+	0.58, 0.58, 0.58, 
+	0.58, 0.58, 0.58, 
+	-0.58, 0.58, 0.58, 
+	-0.58, 0.58, 0.58, 
+	-0.58, 0.58, 0.58,
+	-0.58, 0.58, -0.58, 
+	-0.58, 0.58, -0.58, 
+	-0.58, 0.58, -0.58
+]);

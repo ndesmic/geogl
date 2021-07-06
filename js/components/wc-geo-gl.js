@@ -1,6 +1,6 @@
 import { Mesh } from "../actor/mesh.js";
 import { cube, quadPyramid, quad } from "../data.js";
-import { sphere } from "../lib/shape-gen.js";
+import { uvSphere, facetSphere } from "../lib/shape-gen.js";
 import { compileShader, compileProgram, loadImage } from "../lib/gl-helpers.js";
 import { Camera } from "../actor/camera.js";
 import { Light } from "../actor/light.js";
@@ -89,29 +89,48 @@ export class WcGeoGl extends HTMLElement {
 				varying mediump vec4 vColor;
 				varying mediump vec2 vUV;
 				varying mediump vec3 vNormal;
+				varying mediump vec3 vPosition;
 
 				void main(){
 					gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aVertexPosition, 1.0);
 					vUV = aVertexUV;
 					vColor = vec4(aVertexColor, 1.0);
-					vNormal = aVertexNormal;
+					vNormal = vec3(uModelMatrix * vec4(aVertexNormal, 1.0));
+					vPosition = vec3(uModelMatrix * vec4(aVertexPosition, 1.0));
 				}
 			`, this.context.VERTEX_SHADER);
 
 		const fragmentShader = compileShader(this.context, `
-		    varying lowp vec4 vColor;
-			varying lowp vec2 vUV;
-			varying lowp vec3 vNormal;
+		    varying mediump vec4 vColor;
+			varying mediump vec2 vUV;
+			varying mediump vec3 vNormal;
+			varying mediump vec3 vPosition;
 
 			uniform lowp mat4 uLight1;
 
 			uniform sampler2D uSampler;
 
 			void main() {
-				//mediump float light = dot(vNormal, uLight1[1].xyz);
-				//gl_FragColor = vec4(light, light, light, 1);
+				bool isPoint = uLight1[3][3] == 1.0; 
+				if(isPoint){
+					//point light + color
+					mediump vec3 toLight = normalize(uLight1[0].xyz - vPosition);
+					mediump float light = dot(normalize(vNormal), toLight);
+					gl_FragColor = vColor * uLight1[2] * vec4(light, light, light, 1);
+				} else {
+					//directional light + color
+					mediump float light = dot(normalize(vNormal), uLight1[1].xyz);
+					gl_FragColor = vColor * uLight1[2] * vec4(light, light, light, 1);
+				}
+
+				//directional light + texture
+				//gl_FragColor = texture2D(uSampler, vUV) * vec4(light, light, light, 1);
+				
+				//color
 				//gl_FragColor = vColor;
-				gl_FragColor = texture2D(uSampler, vUV);
+
+				//texture
+				//gl_FragColor = texture2D(uSampler, vUV);
 			}
 		`, this.context.FRAGMENT_SHADER);
 
@@ -134,7 +153,9 @@ export class WcGeoGl extends HTMLElement {
 
 	createMeshes(){
 		this.meshes = {
-			sphere : new Mesh(sphere(20))
+			//quad: new Mesh(quad).setScale({ x: 2.5, y: 2.5 }),
+			//cube : new Mesh(cube)
+			sphere : new Mesh(uvSphere(20, { uvOffset: [0.5,0], color: [1,0.5,1]}))
 		};
 	}
 
@@ -155,9 +176,10 @@ export class WcGeoGl extends HTMLElement {
 	createLights(){
 		this.lights = [
 			new Light({
-				type: "spot",
+				type: "point",
 				direction: [0,0,1],
-				color: [1,1,1,1]
+				position: [0, 0,-1.5],
+				color: [1,1,0,1]
 			})
 		]
 	}
@@ -263,14 +285,6 @@ export class WcGeoGl extends HTMLElement {
 		this.setupGlobalUniforms();
 
 		for (const mesh of Object.values(this.meshes)){
-			
-			mesh.setRotation({ y: Math.PI / 500 });
-			//if(this.#frameCount === 0){
-			//	this.toggleRecord();
-			//} else if(this.#frameCount === 1000){
-			//	this.toggleRecord();
-			//}
-			this.#frameCount++
 			this.bindMesh(mesh);
 			this.context.drawElements(this.context.TRIANGLES, mesh.triangles.length, this.context.UNSIGNED_SHORT, 0);
 		}

@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node ./test/trig.test.js",
+    "test": "node ./test/test.js",
     "start": "npx http-server -o -c-1"
   },
   "repository": {
