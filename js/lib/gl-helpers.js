@@ -13,7 +13,7 @@ export function compileShader(context, text, type) {
 	context.compileShader(shader);
 
 	if (!context.getShaderParameter(shader, context.COMPILE_STATUS)) {
-		throw new Error(`Failed to compile shader: ${context.getShaderInfoLog(shader)}`);
+		throw new Error(`Failed to compile ${type === context.VERTEX_SHADER ? "vertex" : "fragment"} shader: ${context.getShaderInfoLog(shader)}`);
 	}
 	return shader;
 }
@@ -29,4 +29,16 @@ export function compileProgram(context, vertexShader, fragmentShader) {
 	}
 
 	return program;
+}
+
+export function bindAttribute(context, attributes, attributeName, size){
+	const attributeLocation = context.getAttribLocation(context.getParameter(context.CURRENT_PROGRAM), attributeName);
+	if(attributeLocation === -1) return; //bail if it doesn't exist in the shader
+	const attributeBuffer = context.createBuffer();
+	context.bindBuffer(context.ARRAY_BUFFER, attributeBuffer);
+
+	context.bufferData(context.ARRAY_BUFFER, attributes, context.STATIC_DRAW);
+
+	context.enableVertexAttribArray(attributeLocation);
+	context.vertexAttribPointer(attributeLocation, size, context.FLOAT, false, 0, 0);
 }

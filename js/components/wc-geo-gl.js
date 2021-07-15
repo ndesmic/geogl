@@ -1,7 +1,7 @@
 import { Mesh } from "../actor/mesh.js";
-import { cube, quadPyramid, quad } from "../data.js";
+import { cube, quadPyramid, quad, facetQuad } from "../data.js";
 import { uvSphere, facetSphere } from "../lib/shape-gen.js";
-import { compileShader, compileProgram, loadImage } from "../lib/gl-helpers.js";
+import { compileShader, compileProgram, loadImage, bindAttribute } from "../lib/gl-helpers.js";
 import { Camera } from "../actor/camera.js";
 import { Light } from "../actor/light.js";
 
@@ -80,11 +80,14 @@ export class WcGeoGl extends HTMLElement {
 				uniform mat4 uProjectionMatrix;
 				uniform mat4 uModelMatrix;
 				uniform mat4 uViewMatrix;
+
+				uniform lowp mat4 uLight1;
 				
 				attribute vec3 aVertexPosition;
 				attribute vec3 aVertexColor;
 				attribute vec2 aVertexUV;
 				attribute vec3 aVertexNormal;
+				attribute vec3 aVertexCentroid;
 
 				varying mediump vec4 vColor;
 				varying mediump vec2 vUV;
@@ -92,9 +95,23 @@ export class WcGeoGl extends HTMLElement {
 				varying mediump vec3 vPosition;
 
 				void main(){
+					bool isPoint = uLight1[3][3] == 1.0;
+					if(isPoint){
+						mediump vec3 normalCentroid = vec3(uModelMatrix * vec4(aVertexCentroid, 1.0));
+						mediump vec3 normalNormal = normalize(vec3(uModelMatrix * vec4(aVertexNormal, 1.0)));
+
+						mediump vec3 toLight = normalize(uLight1[0].xyz - normalCentroid);
+						mediump float light = dot(normalNormal, toLight);
+						vColor = vec4(aVertexColor, 1.0) * uLight1[2] * vec4(light, light, light, 1);
+					} else {
+						mediump vec3 normalNormal = normalize(vec3(uModelMatrix * vec4(aVertexNormal, 1.0)));
+						mediump float light = dot(normalNormal, uLight1[1].xyz);
+						vColor = vec4(aVertexColor, 1.0) * uLight1[2] * vec4(light, light, light, 1);
+					}
+
 					gl_Position = uProjectionMatrix * uViewMatrix * uModelMatrix * vec4(aVertexPosition, 1.0);
 					vUV = aVertexUV;
-					vColor = vec4(aVertexColor, 1.0);
+					
 					vNormal = vec3(uModelMatrix * vec4(aVertexNormal, 1.0));
 					vPosition = vec3(uModelMatrix * vec4(aVertexPosition, 1.0));
 				}
@@ -106,31 +123,8 @@ export class WcGeoGl extends HTMLElement {
 			varying mediump vec3 vNormal;
 			varying mediump vec3 vPosition;
 
-			uniform lowp mat4 uLight1;
-
-			uniform sampler2D uSampler;
-
 			void main() {
-				bool isPoint = uLight1[3][3] == 1.0; 
-				if(isPoint){
-					//point light + color
-					mediump vec3 toLight = normalize(uLight1[0].xyz - vPosition);
-					mediump float light = dot(normalize(vNormal), toLight);
-					gl_FragColor = vColor * uLight1[2] * vec4(light, light, light, 1);
-				} else {
-					//directional light + color
-					mediump float light = dot(normalize(vNormal), uLight1[1].xyz);
-					gl_FragColor = vColor * uLight1[2] * vec4(light, light, light, 1);
-				}
-
-				//directional light + texture
-				//gl_FragColor = texture2D(uSampler, vUV) * vec4(light, light, light, 1);
-				
-				//color
-				//gl_FragColor = vColor;
-
-				//texture
-				//gl_FragColor = texture2D(uSampler, vUV);
+				gl_FragColor = vColor;
 			}
 		`, this.context.FRAGMENT_SHADER);
 
@@ -153,9 +147,9 @@ export class WcGeoGl extends HTMLElement {
 
 	createMeshes(){
 		this.meshes = {
-			//quad: new Mesh(quad).setScale({ x: 2.5, y: 2.5 }),
+			//quad: new Mesh(facetQuad)
 			//cube : new Mesh(cube)
-			sphere : new Mesh(uvSphere(20, { uvOffset: [0.5,0], color: [1,0.5,1]}))
+			sphere : new Mesh(facetSphere(20, { uvOffset: [0.5,0], color: [0.5,0.25,1]})).setRotation({ y: Math.PI / 4})
 		};
 	}
 
@@ -176,64 +170,27 @@ export class WcGeoGl extends HTMLElement {
 	createLights(){
 		this.lights = [
 			new Light({
-				type: "point",
+				type: "directional",
 				direction: [0,0,1],
-				position: [0, 0,-1.5],
-				color: [1,1,0,1]
+				position: [0.5, 0, -1.5],
+				color: [1,1,1,1]
 			})
 		]
 	}
 
 	bindMesh(mesh){
-		this.bindPositions(mesh.positions);
-		this.bindColors(mesh.colors);
-		this.bindUvs(mesh.uvs);
-		this.bindNormals(mesh.normals);
+		bindAttribute(this.context, mesh.positions, "aVertexPosition", 3);
+		bindAttribute(this.context, mesh.colors, "aVertexColor", 3);
+		bindAttribute(this.context, mesh.uvs, "aVertexUV", 2);
+		bindAttribute(this.context, mesh.normals, "aVertexNormal", 3);
+		if(mesh.centroids){
+			bindAttribute(this.context, mesh.centroids, "aVertexCentroid", 3);
+		}
 		this.bindIndices(mesh.triangles);
 		this.bindUniforms(mesh.getModelMatrix());
 		this.bindTexture(mesh.textureName);
 	}
 
-	bindPositions(positions) {
-		const positionBuffer = this.context.createBuffer();
-		this.context.bindBuffer(this.context.ARRAY_BUFFER, positionBuffer);
-
-		this.context.bufferData(this.context.ARRAY_BUFFER, positions, this.context.STATIC_DRAW);
-
-		const positionLocation = this.context.getAttribLocation(this.program, "aVertexPosition");
-		this.context.enableVertexAttribArray(positionLocation);
-		this.context.vertexAttribPointer(positionLocation, 3, this.context.FLOAT, false, 0, 0);
-	}
-	bindColors(colors){
-		const colorBuffer = this.context.createBuffer();
-		this.context.bindBuffer(this.context.ARRAY_BUFFER, colorBuffer);
-
-		this.context.bufferData(this.context.ARRAY_BUFFER, colors, this.context.STATIC_DRAW);
-
-		const vertexColorLocation = this.context.getAttribLocation(this.program, "aVertexColor");
-		this.context.enableVertexAttribArray(vertexColorLocation);
-		this.context.vertexAttribPointer(vertexColorLocation, 3, this.context.FLOAT, false, 0, 0);
-	}
-	bindUvs(uvs) {
-		const uvBuffer = this.context.createBuffer();
-		this.context.bindBuffer(this.context.ARRAY_BUFFER, uvBuffer);
-
-		this.context.bufferData(this.context.ARRAY_BUFFER, uvs, this.context.STATIC_DRAW);
-
-		const vertexUvLocation = this.context.getAttribLocation(this.program, "aVertexUV");
-		this.context.enableVertexAttribArray(vertexUvLocation);
-		this.context.vertexAttribPointer(vertexUvLocation, 2, this.context.FLOAT, false, 0, 0);
-	}
-	bindNormals(normals) {
-		const normalsBuffer = this.context.createBuffer();
-		this.context.bindBuffer(this.context.ARRAY_BUFFER, normalsBuffer);
-
-		this.context.bufferData(this.context.ARRAY_BUFFER, normals, this.context.STATIC_DRAW);
-
-		const vertexNormalLocation = this.context.getAttribLocation(this.program, "aVertexNormal");
-		this.context.enableVertexAttribArray(vertexNormalLocation);
-		this.context.vertexAttribPointer(vertexNormalLocation, 3, this.context.FLOAT, false, 0, 0);
-	}
 	bindIndices(indices) {
 		const indexBuffer = this.context.createBuffer();
 		this.context.bindBuffer(this.context.ELEMENT_ARRAY_BUFFER, indexBuffer);

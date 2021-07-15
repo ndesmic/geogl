@@ -5,6 +5,7 @@ export class Mesh {
 	#colors;
 	#normals;
 	#uvs;
+	#centroids;
 	#triangles;
 
 	#textureName;
@@ -16,6 +17,7 @@ export class Mesh {
 		this.colors = mesh.colors;
 		this.normals = mesh.normals;
 		this.uvs = mesh.uvs;
+		this.centroids = mesh.centroids;
 		this.triangles = mesh.triangles;
 		this.textureName = mesh.textureName;
 	}
@@ -43,6 +45,12 @@ export class Mesh {
 	}
 	get uvs() {
 		return this.#uvs;
+	}
+	set centroids(val){
+		this.#centroids = new Float32Array(val);
+	}
+	get centroids(){
+		return this.#centroids;
 	}
 	get textureName() {
 		return this.#textureName;

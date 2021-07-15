@@ -17,7 +17,7 @@ export class Light {
 	px, py, pz, 1,   position
 	dx, dy, dz, 1,   direction (to light)
 	r, g, b, a,      color
-	0, 0, 0, type    type(0 = spot, 1 = point)
+	0, 0, 0, type    type(0 = directional, 1 = point)
 	*/
 	getInfoMatrix(){
 		return new Float32Array([

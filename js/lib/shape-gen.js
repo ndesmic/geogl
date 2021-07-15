@@ -1,6 +1,6 @@
 import { arrayChunk } from "./array-helper.js";
 import { latLngToCartesian, inverseLerp, TWO_PI, QUARTER_TURN } from "./math-helpers.js";
-import { triangleNormal } from "./vector.js";
+import { normalizeVector, polyCentroid, triangleCentroid, triangleNormal } from "./vector.js";
 
 export function uvSphere(density, { color, uvOffset } = {}){
 	const radsPerUnit = Math.PI / density;
@@ -74,37 +74,106 @@ export function uvSphere(density, { color, uvOffset } = {}){
 	};
 }
 
-export function facetSphere(density, options){
-	const sphere = uvSphere(density, options);
+export function facetSphere(density, { color, uvOffset } = {}) {
+	const radsPerUnit = Math.PI / density;
+	const sliceVertCount = density * 2;
 
-	const rawTriangles = arrayChunk(sphere.triangles, 3);
-	const rawPositions = arrayChunk(sphere.positions, 3);
-	const rawUVs = arrayChunk(sphere.uvs, 2);
-	const rawColors = arrayChunk(sphere.colors, 3);
-
-	const positions = [];
-	const uvs = [];
-	const normals = [];
-	const colors = [];
-	const triangles = [];
-	let index = 0;
-
-	for(const tri of rawTriangles){
-		positions.push(rawPositions[tri[0]], rawPositions[tri[1]], rawPositions[tri[2]]);
-		uvs.push(rawUVs[tri[0]], rawUVs[tri[1]], rawUVs[tri[2]]);
-		colors.push(rawColors[tri[0]], rawColors[tri[1]], rawColors[tri[2]]);
-		const normal = triangleNormal(rawPositions[tri[0]], rawPositions[tri[1]], rawPositions[tri[2]]);
-		normals.push(normal, normal, normal);
-		triangles.push([index, index + 1, index + 2]);
-		index += 3;
+	//positions and UVs
+	const rawPositions = [];
+	let rawUvs = [];
+	let latitude = -Math.PI / 2;
+	//latitude
+	for (let i = 0; i <= density; i++) {
+		const v = inverseLerp(-QUARTER_TURN, QUARTER_TURN, -latitude);
+		let longitude = 0;
+		let vertLength = sliceVertCount + ((i > 0 && i < density) ? 1 : 0); //middle rings need extra vert for end U value
+		//longitude
+		for (let j = 0; j < vertLength; j++) {
+			rawPositions.push(latLngToCartesian([1, latitude, longitude]));
+			rawUvs.push([inverseLerp(0, TWO_PI, longitude), v]);
+			longitude += radsPerUnit;
+		}
+		latitude += radsPerUnit;
 	}
+
+	if (uvOffset) {
+		rawUvs = rawUvs.map(uv => [(uv[0] + uvOffset[0]) % 1, (uv[1] + uvOffset[1]) % 1]);
+	}
+
+	//triangles
+	const triangles = [];
+	const positions = [];
+	const centroids = [];
+	const colors = [];
+	const normals = [];
+	const uvs = [];
+	const vertexColor = color ?? [1,0,0];
+	let index = 0;
+	let ringStartP = 0;
+
+	for (let ring = 0; ring < density; ring++) {
+		const vertexBump = (ring > 0 ? 1 : 0);
+		for (let sliceVert = 0; sliceVert < sliceVertCount; sliceVert++) {
+			const thisP = ringStartP + sliceVert;
+			const nextP = ringStartP + sliceVert + 1;
+			const nextRingP = thisP + sliceVertCount + vertexBump;
+			const nextRingNextP = nextP + sliceVertCount + vertexBump;
+
+			if (ring === 0) {
+				positions.push(rawPositions[thisP], rawPositions[nextRingNextP], rawPositions[nextRingP]);
+				uvs.push(rawUvs[thisP], rawUvs[nextRingNextP], rawUvs[nextRingP]);
+				colors.push(vertexColor, vertexColor, vertexColor);
+				const centroid = polyCentroid([rawPositions[thisP], rawPositions[nextRingNextP], rawPositions[nextRingP]]);
+				centroids.push(centroid, centroid, centroid);
+				const normal = normalizeVector(centroid);
+				normals.push(normal, normal, normal);
+				triangles.push([index, index + 1, index + 2]);
+				index += 3;
+			}
+			if (ring === density - 1) {
+				positions.push(rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingP]);
+				uvs.push(rawUvs[thisP], rawUvs[nextP], rawUvs[nextRingP]);
+				colors.push(vertexColor, vertexColor, vertexColor);
+				const centroid = polyCentroid([rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingP]]);
+				centroids.push(centroid, centroid, centroid);
+				const normal = normalizeVector(centroid);
+				normals.push(normal, normal, normal);
+				triangles.push([index, index + 1, index + 2]);
+				index += 3;
+			}
+			if (ring > 0 && ring < density - 1 && density > 2) {
+				positions.push(
+					rawPositions[thisP], rawPositions[nextRingNextP], rawPositions[nextRingP],
+					rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingNextP]
+				);
+				uvs.push(
+					rawUvs[thisP], rawUvs[nextRingNextP], rawUvs[nextRingP],
+					rawUvs[thisP], rawUvs[nextP], rawUvs[nextRingNextP]
+				);
+				colors.push(vertexColor, vertexColor, vertexColor, vertexColor, vertexColor, vertexColor);
+				const centroid = polyCentroid([rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingNextP], rawPositions[nextRingP]]);
+				centroids.push(centroid, centroid, centroid, centroid, centroid, centroid);
+				const normal = normalizeVector(centroid);
+				normals.push(normal, normal, normal, normal, normal, normal);
+				triangles.push([index, index + 1, index + 2], [index + 3, index + 4, index + 5]);
+				index += 6;
+			}
+		}
+		if (ring === 0) {
+			ringStartP += sliceVertCount;
+		} else {
+			ringStartP += sliceVertCount + 1;
+		}
+	}
+
 
 	return {
 		positions: positions.flat(),
 		colors: colors.flat(),
+		centroids: centroids.flat(),
 		triangles: triangles.flat(),
 		uvs: uvs.flat(),
 		normals: normals.flat(),
-		textureName: sphere.textureName
-	}
+		textureName: "earth"
+	};
 }

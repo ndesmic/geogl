@@ -1,3 +1,3 @@
-import "./math-helpers.test.js";
+//import "./math-helpers.test.js";
 import "./vector.test.js";
-import "./shape-gen.test.js";
+//import "./shape-gen.test.js";

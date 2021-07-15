@@ -229,3 +229,59 @@ export function triangleNormal(pointA, pointB, pointC){
 	const vector2 = subtractVector(pointB, pointA);
 	return normalizeVector(crossVector(vector1, vector2));
 }
+
+export function triangleCentroid(pointA, pointB, pointC){
+	return [
+		(pointA[0] + pointB[0] + pointC[0]) / 3,
+		(pointA[1] + pointB[1] + pointC[1]) / 3,
+		(pointA[2] + pointB[2] + pointC[2]) / 3,
+	];
+}
+
+export function polyArea(points){
+	let sum = 0;
+	for(let i = 0; i < points.length; i++){
+		const nextI = (i + 1) % points.length;
+		sum += (points[i][0] * points[nextI][1]) - (points[nextI][0] * points[i][1]);
+	}
+	return Math.abs(sum) / 2;
+}
+
+export function polyCentroid2d(points){
+	const area = polyArea(points);
+
+	let sumX = 0;
+	let sumY = 0;
+	for (let i = 0; i < points.length; i++) {
+		const nextI = (i + 1) % points.length;
+		const x0 = points[i][0];
+		const x1 = points[nextI][0];
+		const y0 = points[i][1];
+		const y1 = points[nextI][1];
+
+		const doubleArea = (x0 * y1) - (x1 * y0);
+		sumX += (x0 + x1) * doubleArea;
+		sumY += (y0 + y1) * doubleArea;
+	}
+
+	const cx = sumX / (6 * area);
+	const cy = sumY / (6 * area);
+
+	return [cx, cy];
+}
+
+export function polyCentroid(points){
+	const n = triangleNormal(points[0], points[1], points[2]);
+	const u = normalizeVector(subtractVector(points[1], points[2]));
+	const v = normalizeVector(crossVector(u, n));
+	const p0 = points[0];
+
+	const mappedPoints = points.map(p => [dotVector(subtractVector(p, p0),u), dotVector(subtractVector(p, p0),v)]);
+	const [cu, cv] = polyCentroid2d(mappedPoints);
+
+	return [
+		dotVector([p0[0], u[0], v[0]], [1, cu, cv]),
+		dotVector([p0[1], u[1], v[1]], [1, cu, cv]),
+		dotVector([p0[2], u[2], v[2]], [1, cu, cv])
+	];
+}
