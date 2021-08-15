@@ -55,10 +55,17 @@ export class Camera {
 		this.#target[2] += z;
 	}
 
-	orbitBy({ lat = 0, long = 0 }){
+	orbitBy({ lat = 0, long = 0, radius = 0 }){
 		const [r, currentLat, currentLng] = this.getOrbit(); 
 		const newLat = clamp(currentLat + lat, -Math.PI/2, Math.PI/2);
-		this.#position = latLngToCartesian([r, newLat, currentLng - long]);
+		const newRadius = Math.max(0.1, r + radius);
+		this.#position = latLngToCartesian([newRadius, newLat, currentLng - long]);
+	}
+
+	zoomBy(value) {
+		const [r, currentLat, currentLng] = this.getOrbit();
+		const newRadius = Math.max(0.1, r / value);
+		this.#position = latLngToCartesian([newRadius, currentLat, currentLng]);
 	}
 
 	lookAt(x, y, z){

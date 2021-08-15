@@ -7,6 +7,20 @@ export function loadImage(url) {
 	});
 }
 
+export function loadShader(context, url, type){
+	return fetch(url)
+		.then(r => r.text())
+		.then(txt => compileShader(context, txt, type));
+}
+
+export async function loadProgram(context, url){
+	const [vertexShader, fragmentShader] = await Promise.all([
+		loadShader(context, `${url}.vert.glsl`, context.VERTEX_SHADER),
+		loadShader(context, `${url}.frag.glsl`, context.FRAGMENT_SHADER)
+	]);
+	return compileProgram(context, vertexShader, fragmentShader);
+}
+
 export function compileShader(context, text, type) {
 	const shader = context.createShader(type);
 	context.shaderSource(shader, text);
@@ -41,4 +55,23 @@ export function bindAttribute(context, attributes, attributeName, size){
 
 	context.enableVertexAttribArray(attributeLocation);
 	context.vertexAttribPointer(attributeLocation, size, context.FLOAT, false, 0, 0);
+}
+
+export function createTexture(context, image) {
+	const texture = context.createTexture();
+	context.bindTexture(context.TEXTURE_2D, texture);
+	context.texImage2D(context.TEXTURE_2D, 0, context.RGBA, context.RGBA, context.UNSIGNED_BYTE, image);
+	context.generateMipmap(context.TEXTURE_2D);
+
+	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, context.CLAMP_TO_EDGE);
+	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, context.CLAMP_TO_EDGE);
+	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.LINEAR_MIPMAP_LINEAR);
+	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, context.LINEAR);
+
+	return texture;
+}
+
+export function loadTexture(context, url){
+	return loadImage(url)
+		.then(img => createTexture(context, img));
 }

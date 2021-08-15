@@ -7,8 +7,7 @@ export class Mesh {
 	#uvs;
 	#centroids;
 	#triangles;
-
-	#textureName;
+	#material;
 
 	#modelMatrix = getIdentityMatrix();
 
@@ -19,7 +18,7 @@ export class Mesh {
 		this.uvs = mesh.uvs;
 		this.centroids = mesh.centroids;
 		this.triangles = mesh.triangles;
-		this.textureName = mesh.textureName;
+		this.material = mesh.material;
 	}
 
 	set positions(val) {
@@ -52,11 +51,11 @@ export class Mesh {
 	get centroids(){
 		return this.#centroids;
 	}
-	get textureName() {
-		return this.#textureName;
+	get material() {
+		return this.#material;
 	}
-	set textureName(val) {
-		this.#textureName = val;
+	set material(val) {
+		this.#material = val;
 	}
 	set triangles(val) {
 		this.#triangles = new Uint16Array(val);

@@ -1,6 +1,5 @@
-import { arrayChunk } from "./array-helper.js";
 import { latLngToCartesian, inverseLerp, TWO_PI, QUARTER_TURN } from "./math-helpers.js";
-import { normalizeVector, polyCentroid, triangleCentroid, triangleNormal } from "./vector.js";
+import { normalizeVector, polyCentroid } from "./vector.js";
 
 export function uvSphere(density, { color, uvOffset } = {}){
 	const radsPerUnit = Math.PI / density;
@@ -175,5 +174,59 @@ export function facetSphere(density, { color, uvOffset } = {}) {
 		uvs: uvs.flat(),
 		normals: normals.flat(),
 		textureName: "earth"
+	};
+}
+
+export function terrianMesh(height, width){
+	const positions = [];
+	const colors = [];
+	const uvs = [];
+	const normals = [];
+	const triangles = [];
+	const startX = -(width / 2);
+	const startZ = -(height / 2);
+
+	let attributeIndex = 0;
+	for(let row = 0; row < width; row++){
+		for(let col = 0; col < height; col++){
+			positions.push(
+					startX + col, 0, startZ + row,
+					startX + 1 + col, 0, startZ + row,
+					startX + 1 + col, 0, startZ + 1 + row,
+					startX + col, 0, startZ + 1 + row
+			);
+			colors.push(
+				1, 0, 0,
+				1, 0, 0,
+				1, 0, 0,
+				1, 0, 0
+			);
+			uvs.push(
+				0, 1,
+				1, 1,
+				1, 0,
+				0, 0
+			);
+			normals.push(
+				0, 1, 0,
+				0, 1, 0,
+				0, 1, 0,
+				0, 1, 0
+			);
+			triangles.push(
+				attributeIndex, attributeIndex + 1, attributeIndex + 2,
+				attributeIndex, attributeIndex + 2, attributeIndex + 3
+			);
+			attributeIndex += 4;
+		}
+	}
+	
+	return {
+		positions,
+		colors,
+		uvs,
+		normals,
+		triangles,
+		textureName: "grass"
 	};
 }
