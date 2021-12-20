@@ -75,3 +75,29 @@ export function loadTexture(context, url){
 	return loadImage(url)
 		.then(img => createTexture(context, img));
 }
+
+export function autoBindUniform(context, program, uniformName, value){
+	const location = context.getUniformLocation(program, uniformName);
+	if (!location) return;
+	if (Array.isArray(value)) {
+		switch (value.length) {
+			case 1: {
+				this.context.uniform1fv(location, value);
+			}
+			case 2: {
+				this.context.uniform2fv(location, value);
+			}
+			case 3: {
+				this.context.uniform3fv(location, value);
+			}
+			case 4: {
+				this.context.uniform4fv(location, value);
+			}
+			default: {
+				console.error(`Invalid dimension for binding uniforms. ${uniformName} with value of length ${value.length}`);
+			}
+		}
+	} else {
+		context.uniform1f(location, value);
+	}
+}

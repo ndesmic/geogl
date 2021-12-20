@@ -1,7 +1,7 @@
 import { Mesh } from "../entity/mesh.js";
 import { cube, quadPyramid, quad, facetQuad } from "../data.js";
 import { uvSphere, facetSphere, terrianMesh } from "../lib/shape-gen.js";
-import { loadImage, bindAttribute, loadProgram, loadTexture } from "../lib/gl-helpers.js";
+import { loadImage, bindAttribute, loadProgram, loadTexture, autoBindUniform, createTexture } from "../lib/gl-helpers.js";
 import { Camera } from "../entity/camera.js";
 import { Light } from "../entity/light.js";
 import { Material } from "../entity/material.js";
@@ -60,7 +60,7 @@ export class WcGeoGl extends HTMLElement {
 				<style>
 					:host { display: block; }
 				</style>
-				<canvas width="${this.#width}px" height="${this.#height}px"></canvas>
+				<canvas width="${this.#width}" height="${this.#height}"></canvas>
 				<button id="record">Record</button>
 			`;
 	}
@@ -81,27 +81,39 @@ export class WcGeoGl extends HTMLElement {
 		this.context.cullFace(this.context.BACK);
 		//this.context.enable(this.context.DEPTH_TEST);
 		this.context.clearColor(0, 0.5, 0.5, 1);
+		this.context.pixelStorei(this.context.UNPACK_FLIP_Y_WEBGL, true);
 	}
+
+	//create content
 
 	createMeshes(){
 		this.meshes = {
 			/*
 			sphere : new Mesh({
-				...uvSphere(10, { uvOffset: [0.5,0], color: [0.5,0.25,1]}),
-				material: this.materials.vertexShaded
-			})*/
+				...uvSphere(20, { uvOffset: [0.5,0], color: [0.5,0.25,1]}),
+				material: this.materials.glossMapped
+			}),
+			*/
 			
+			
+			cube : new Mesh({
+				...quad,
+				material: this.materials.glossMapped
+			})
+			
+			/*
 			mesh: new Mesh({
 				...terrianMesh(4, 4),
 				material: this.materials.pixelShaded
 			}).setRotation({ x: -Math.PI / 2 })
+			*/
 		};
 	}
 
 	createCameras(){
 		this.cameras = {
 			default: new Camera({
-				position: [0, 0, -0.2],
+				position: [0, 0, -2],
 				screenHeight: this.#height,
 				screenWidth: this.#width,
 				fieldOfView: 90,
@@ -116,11 +128,21 @@ export class WcGeoGl extends HTMLElement {
 		this.lights = [
 			new Light({
 				type: "point",
-				direction: [0,0,1],
-				position: [0.5, 0, -1],
+				direction: [1, 0, 0],
+				position: [0, 0, -1],
 				color: [1,1,1,1]
 			})
 		];
+		/*
+		this.lights = [
+			new Light({
+				type: "point",
+				direction: [-1, 0, 1],
+				position: [2, 0, -2],
+				color: [1, 1, 1, 1]
+			})
+		];
+		*/
 	}
 
 	async createMaterials(){
@@ -134,12 +156,39 @@ export class WcGeoGl extends HTMLElement {
 			pixelShaded: new Material({
 				program: await loadProgram(this.context, "shaders/pixel-shaded")
 			}),
+			pixelShadedSpecular: new Material({
+				program: await loadProgram(this.context, "shaders/pixel-shaded-blinn-phong"),
+				uniforms: {
+					gloss: 100.0
+				}
+			}),
+			specMapped: new Material({
+				program: await loadProgram(this.context, "shaders/spec-mapped"),
+				textures: [
+					await loadTexture(this.context, "./img/slimewall.png"),
+					await loadTexture(this.context, "./img/slimewall.specmap.png")
+				],
+				uniforms: {
+					gloss: 100.0
+				}
+			}),
+			glossMapped: new Material({
+				program: await loadProgram(this.context, "shaders/gloss-mapped"),
+				textures: [
+					await loadTexture(this.context, "./img/gradient.png")
+				],
+				uniforms: {
+					specularity: 0.5
+				}
+			}),
 			grassTextured: new Material({
 				program: await loadProgram(this.context, "shaders/textured"),
 				textures: [await loadTexture(this.context, "./img/grass.jpg")]
 			})
 		};
 	}
+
+	//END create content
 
 	bindMesh(mesh){
 		this.bindMaterial(mesh.material);
@@ -167,9 +216,18 @@ export class WcGeoGl extends HTMLElement {
 	}
 	bindMaterial(material){
 		this.context.useProgram(material.program);
-		material.textures.forEach(tex => {
+		material.textures.forEach((tex, index) => {
+			const location = this.context.getUniformLocation(material.program, `uSampler${index}`);
+			if(!location) return;
+			this.context.uniform1i(location, index);
+			this.context.activeTexture(this.context[`TEXTURE${index}`]);
 			this.context.bindTexture(this.context.TEXTURE_2D, tex);
 		});
+		if(material.uniforms){
+			Object.entries(material.uniforms).forEach(([uniformName, uniformValue]) => {
+				autoBindUniform(this.context, material.program, uniformName, uniformValue);
+			});
+		}
 	}
 	setupGlobalUniforms(){
 		const program = this.context.getParameter(this.context.CURRENT_PROGRAM);
@@ -184,6 +242,10 @@ export class WcGeoGl extends HTMLElement {
 		const light1Matrix = this.lights[0].getInfoMatrix();
 		const light1Location = this.context.getUniformLocation(program, "uLight1");
 		this.context.uniformMatrix4fv(light1Location, false, light1Matrix);
+
+		const cameraPosition = this.cameras.default.getPosition();
+		const cameraLocation = this.context.getUniformLocation(program, "uCamera");
+		this.context.uniform3fv(cameraLocation, Float32Array.from(cameraPosition));
 	}
 	renderLoop(){
 		requestAnimationFrame(() => {

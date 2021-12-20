@@ -285,3 +285,11 @@ export function polyCentroid(points){
 		dotVector([p0[2], u[2], v[2]], [1, cu, cv])
 	];
 }
+
+export function reflect(vec, normal){
+	return [
+		vec[0] - 2 * dotVector(vec, normal) * normal[0],
+		vec[1] - 2 * dotVector(vec, normal) * normal[1],
+		vec[2] - 2 * dotVector(vec, normal) * normal[2],
+	];
+}
