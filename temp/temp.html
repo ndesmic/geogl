@@ -1,0 +1,41 @@
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="temp.css">
+	</head>
+	<body>
+		<canvas id="canvas"></canvas>
+		<!-- vertex shader -->
+		<script id="vertex-shader-3d" type="x-shader/x-vertex">
+		attribute vec4 a_position;
+		varying vec4 v_position;
+		void main() {
+		  v_position = a_position;
+		  gl_Position = a_position;
+		  gl_Position.z = 1.0;
+		}
+		</script>
+		<!-- fragment shader -->
+		<script id="fragment-shader-3d" type="x-shader/x-fragment">
+		precision mediump float;
+		
+		uniform samplerCube u_skybox;
+		uniform mat4 u_viewDirectionProjectionInverse;
+		
+		varying vec4 v_position;
+		void main() {
+		  vec4 t = u_viewDirectionProjectionInverse * v_position;
+		  gl_FragColor = textureCube(u_skybox, normalize(t.xyz / t.w));
+		}
+		</script>
+		<!--
+		for most samples webgl-utils only provides shader compiling/linking and
+		canvas resizing because why clutter the examples with code that's the same in every sample.
+		See https://webglfundamentals.org/webgl/lessons/webgl-boilerplate.html
+		and https://webglfundamentals.org/webgl/lessons/webgl-resizing-the-canvas.html
+		for webgl-utils, m3, m4, and webgl-lessons-ui.
+		-->
+		<script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
+		<script src="https://webglfundamentals.org/webgl/resources/m4.js"></script>
+		<script src="./temp.js"></script>
+	</body>
+</html>

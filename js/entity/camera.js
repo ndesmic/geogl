@@ -83,8 +83,8 @@ export class Camera {
 
 	getProjectionMatrix(){
 		return this.#isPerspective 
-			? new Float32Array(getProjectionMatrix(this.#screenHeight, this.#screenWidth, this.#fieldOfView, this.#near, this.#far).flat())
-			: new Float32Array(getOrthoMatrix(this.#left, this.#right, this.#bottom, this.#top, this.#near, this.#far).flat());
+			? getProjectionMatrix(this.#screenHeight, this.#screenWidth, this.#fieldOfView, this.#near, this.#far).flat()
+			: getOrthoMatrix(this.#left, this.#right, this.#bottom, this.#top, this.#near, this.#far).flat();
 	}
 
 	getFieldOfView(){

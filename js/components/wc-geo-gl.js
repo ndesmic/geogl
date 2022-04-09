@@ -1,10 +1,12 @@
 import { Mesh } from "../entity/mesh.js";
 import { cube, quadPyramid, quad, facetQuad } from "../data.js";
 import { uvSphere, facetSphere, terrianMesh } from "../lib/shape-gen.js";
-import { loadImage, bindAttribute, loadProgram, loadTexture, autoBindUniform, createTexture } from "../lib/gl-helpers.js";
+import { loadImage, bindAttribute, loadProgram, loadTexture, loadCubeMap, autoBindUniform, createTexture } from "../lib/gl-helpers.js";
+import { getInverse, multiplyMatrix, trimMatrix, transpose, asMatrix, multiplyMatrixVector } from "../lib/vector.js";
 import { Camera } from "../entity/camera.js";
 import { Light } from "../entity/light.js";
 import { Material } from "../entity/material.js";
+import { Environment } from "../entity/environment.js";
 
 const degreesPerRad = 180 / Math.PI;
 
@@ -49,6 +51,7 @@ export class WcGeoGl extends HTMLElement {
 		this.attachEvents();
 		await this.bootGpu();
 		await this.createMaterials();
+		await this.createEnvironment();
 		this.createCameras();
 		this.createMeshes();
 		this.createLights();
@@ -77,36 +80,31 @@ export class WcGeoGl extends HTMLElement {
 	}
 	async bootGpu() {
 		this.context = this.dom.canvas.getContext("webgl2");
-		this.context.enable(this.context.CULL_FACE);
-		this.context.cullFace(this.context.BACK);
-		//this.context.enable(this.context.DEPTH_TEST);
-		this.context.clearColor(0, 0.5, 0.5, 1);
-		this.context.pixelStorei(this.context.UNPACK_FLIP_Y_WEBGL, true);
+		this.context.clearColor(0, 0.5, 0.0, 1);
+		//this.context.pixelStorei(this.context.UNPACK_FLIP_Y_WEBGL, true);
 	}
 
 	//create content
 
 	createMeshes(){
 		this.meshes = {
-			/*
 			sphere : new Mesh({
-				...uvSphere(20, { uvOffset: [0.5,0], color: [0.5,0.25,1]}),
-				material: this.materials.glossMapped
-			}),
-			*/
+				...uvSphere(20, { color: [1,0,0], uvScale: [4.0, 4.0]} ),
+				material: this.materials.orange
+			})
 			
-			
+			/*
 			cube : new Mesh({
 				...quad,
 				material: this.materials.glossMapped
 			})
+			*/
 			
 			/*
 			mesh: new Mesh({
 				...terrianMesh(4, 4),
-				material: this.materials.pixelShaded
-			}).setRotation({ x: -Math.PI / 2 })
-			*/
+				material: this.materials.vertexShaded
+			})*/
 		};
 	}
 
@@ -117,7 +115,7 @@ export class WcGeoGl extends HTMLElement {
 				screenHeight: this.#height,
 				screenWidth: this.#width,
 				fieldOfView: 90,
-				near: 0,
+				near: 0.01,
 				far: 5,
 				isPerspective: true
 			})
@@ -128,25 +126,15 @@ export class WcGeoGl extends HTMLElement {
 		this.lights = [
 			new Light({
 				type: "point",
-				direction: [1, 0, 0],
-				position: [0, 0, -1],
+				position: [0, 0, -2],
 				color: [1,1,1,1]
 			})
 		];
-		/*
-		this.lights = [
-			new Light({
-				type: "point",
-				direction: [-1, 0, 1],
-				position: [2, 0, -2],
-				color: [1, 1, 1, 1]
-			})
-		];
-		*/
 	}
 
 	async createMaterials(){
 		this.materials = {
+			/*
 			flatShaded: new Material({
 				program: await loadProgram(this.context, "shaders/flat-shaded")
 			}),
@@ -185,7 +173,30 @@ export class WcGeoGl extends HTMLElement {
 				program: await loadProgram(this.context, "shaders/textured"),
 				textures: [await loadTexture(this.context, "./img/grass.jpg")]
 			})
+			earth: new Material({
+				program: await loadProgram(this.context, "shaders/textured"),
+				textures: [await loadTexture(this.context, "./img/earth.png")]
+			}),
+			*/
+			orange: new Material({
+				program: await loadProgram(this.context, "shaders/textured"),
+				textures: [await loadTexture(this.context, "./img/orange.jpg", { wrapS: this.context.REPEAT, wrapT: this.context.REPEAT })]
+			})
 		};
+	}
+
+	async createEnvironment() {
+		this.environment = new Environment({
+			program: await loadProgram(this.context, "shaders/environment-map"),
+			cubemap: await loadCubeMap(this.context, [
+				"./img/cubemap/tree-minus-x.png",
+				"./img/cubemap/tree-plus-y.png",
+				"./img/cubemap/tree-plus-z.png",
+				"./img/cubemap/tree-minus-y.png",
+				"./img/cubemap/tree-plus-x.png",
+				"./img/cubemap/tree-minus-z.png",
+			])
+		});
 	}
 
 	//END create content
@@ -213,6 +224,11 @@ export class WcGeoGl extends HTMLElement {
 		const program = this.context.getParameter(this.context.CURRENT_PROGRAM)
 		const modelMatrixLocation = this.context.getUniformLocation(program, "uModelMatrix");
 		this.context.uniformMatrix4fv(modelMatrixLocation, false, modelMatrix);
+
+		const viewMatrix = this.cameras.default.getViewMatrix();
+		const normalMatrixLocation = this.context.getUniformLocation(program, "uNormalMatrix");
+		const viewModelInverseTranspose = transpose(getInverse(trimMatrix(multiplyMatrix(asMatrix(modelMatrix, 4, 4), asMatrix(viewMatrix, 4, 4)), 3, 3)));
+		this.context.uniformMatrix3fv(normalMatrixLocation, false, viewModelInverseTranspose.flat());
 	}
 	bindMaterial(material){
 		this.context.useProgram(material.program);
@@ -225,8 +241,36 @@ export class WcGeoGl extends HTMLElement {
 		});
 		if(material.uniforms){
 			Object.entries(material.uniforms).forEach(([uniformName, uniformValue]) => {
-				autoBindUniform(this.context, material.program, uniformName, uniformValue);
+				autoBindUniform(this.context, uniformName, uniformValue, material.program);
 			});
+		}
+	}
+	bindEnvironment(){
+		if(this.environment){
+			this.context.useProgram(this.environment.program);
+			this.context.activeTexture(this.context.TEXTURE0);
+			this.context.bindTexture(this.context.TEXTURE_CUBE_MAP, this.environment.cubemap);
+			bindAttribute(this.context, [
+				-1.0, -1.0,
+				1.0, -1.0,
+				-1.0, 1.0,
+				1.0, 1.0
+			], "aVertexPosition", 2);
+			const viewMatrix = asMatrix(this.cameras.default.getViewMatrix(), 4, 4);
+			//remove translation
+			viewMatrix[3][0] = 0;
+			viewMatrix[3][1] = 0;
+			viewMatrix[3][2] = 0;
+			const projectionMatrix = asMatrix(this.cameras.default.getProjectionMatrix(), 4, 4);
+			const viewProjectMatrix = multiplyMatrix(viewMatrix, projectionMatrix);
+			const inverseViewProjectionMatrix = getInverse(viewProjectMatrix);
+
+			autoBindUniform(this.context, "uViewProjectionInverse", inverseViewProjectionMatrix.flat());
+			bindAttribute(this.context, [
+				-1.0, -1.0,
+				3, -1.0,
+				-1.0, 3.0
+			], "aVertexPosition", 2);
 		}
 	}
 	setupGlobalUniforms(){
@@ -244,8 +288,8 @@ export class WcGeoGl extends HTMLElement {
 		this.context.uniformMatrix4fv(light1Location, false, light1Matrix);
 
 		const cameraPosition = this.cameras.default.getPosition();
-		const cameraLocation = this.context.getUniformLocation(program, "uCamera");
-		this.context.uniform3fv(cameraLocation, Float32Array.from(cameraPosition));
+		const cameraPositionLocation = this.context.getUniformLocation(program, "uCameraPosition");
+		this.context.uniform3fv(cameraPositionLocation, Float32Array.from(cameraPosition));
 	}
 	renderLoop(){
 		requestAnimationFrame(() => {
@@ -256,10 +300,24 @@ export class WcGeoGl extends HTMLElement {
 	render() {
 		this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
 
+		this.context.enable(this.context.CULL_FACE);
+		this.context.cullFace(this.context.BACK);
+		this.context.enable(this.context.DEPTH_TEST);
+		this.context.depthMask(true);
+
 		for (const mesh of Object.values(this.meshes)){
 			this.bindMesh(mesh);
 			this.setupGlobalUniforms();
 			this.context.drawElements(this.context.TRIANGLES, mesh.triangles.length, this.context.UNSIGNED_SHORT, 0);
+		}
+
+		this.context.depthMask(false);
+
+		if (this.environment) {
+			this.context.useProgram(this.environment.program);
+			this.bindEnvironment();
+			this.setupGlobalUniforms();
+			this.context.drawArrays(this.context.TRIANGLES, 0, 3);
 		}
 	}
 

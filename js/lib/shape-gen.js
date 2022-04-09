@@ -1,7 +1,7 @@
 import { latLngToCartesian, inverseLerp, TWO_PI, QUARTER_TURN } from "./math-helpers.js";
-import { normalizeVector, polyCentroid } from "./vector.js";
+import { normalizeVector, getPolygonCentroid3d } from "./vector.js";
 
-export function uvSphere(density, { color, uvOffset } = {}){
+export function uvSphere(density, { color, uvOffset, uvScale } = {}){
 	const radsPerUnit = Math.PI / density;
 	const sliceVertCount = density * 2;
 
@@ -23,6 +23,9 @@ export function uvSphere(density, { color, uvOffset } = {}){
 		latitude += radsPerUnit;
 	}
 
+	if(uvScale){
+		uvs = uvs.map(uv => [uv[0] * uvScale[0], uv[1] * uvScale[1]]);
+	}
 	if(uvOffset){
 		uvs = uvs.map(uv => [(uv[0] + uvOffset[0]) % 1, (uv[1] + uvOffset[1]) % 1]);
 	}
@@ -122,7 +125,7 @@ export function facetSphere(density, { color, uvOffset } = {}) {
 				positions.push(rawPositions[thisP], rawPositions[nextRingNextP], rawPositions[nextRingP]);
 				uvs.push(rawUvs[thisP], rawUvs[nextRingNextP], rawUvs[nextRingP]);
 				colors.push(vertexColor, vertexColor, vertexColor);
-				const centroid = polyCentroid([rawPositions[thisP], rawPositions[nextRingNextP], rawPositions[nextRingP]]);
+				const centroid = getPolygonCentroid3d([rawPositions[thisP], rawPositions[nextRingNextP], rawPositions[nextRingP]]);
 				centroids.push(centroid, centroid, centroid);
 				const normal = normalizeVector(centroid);
 				normals.push(normal, normal, normal);
@@ -133,7 +136,7 @@ export function facetSphere(density, { color, uvOffset } = {}) {
 				positions.push(rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingP]);
 				uvs.push(rawUvs[thisP], rawUvs[nextP], rawUvs[nextRingP]);
 				colors.push(vertexColor, vertexColor, vertexColor);
-				const centroid = polyCentroid([rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingP]]);
+				const centroid = getPolygonCentroid3d([rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingP]]);
 				centroids.push(centroid, centroid, centroid);
 				const normal = normalizeVector(centroid);
 				normals.push(normal, normal, normal);
@@ -150,7 +153,7 @@ export function facetSphere(density, { color, uvOffset } = {}) {
 					rawUvs[thisP], rawUvs[nextP], rawUvs[nextRingNextP]
 				);
 				colors.push(vertexColor, vertexColor, vertexColor, vertexColor, vertexColor, vertexColor);
-				const centroid = polyCentroid([rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingNextP], rawPositions[nextRingP]]);
+				const centroid = getPolygonCentroid3d([rawPositions[thisP], rawPositions[nextP], rawPositions[nextRingNextP], rawPositions[nextRingP]]);
 				centroids.push(centroid, centroid, centroid, centroid, centroid, centroid);
 				const normal = normalizeVector(centroid);
 				normals.push(normal, normal, normal, normal, normal, normal);

@@ -9,7 +9,7 @@ export class Light {
 	constructor(light){
 		this.#type = light.type ?? "directional";
 		this.#position = light.position ?? [0,0,0];
-		this.#direction = light.direction;
+		this.#direction = light.direction ?? [0,0,0];
 		this.#color = light.color ?? [1,1,1,1];
 	}
 
