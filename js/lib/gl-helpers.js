@@ -21,6 +21,15 @@ export async function loadProgram(context, url){
 	return compileProgram(context, vertexShader, fragmentShader);
 }
 
+export async function loadUrl(url, type = "text"){
+	const res = await fetch(url);
+	switch(type){
+		case "text": return res.text();
+		case "blob": return res.blob();
+		case "arrayBuffer": return res.arrayBuffer();
+	}
+}
+
 export function compileShader(context, text, type) {
 	const shader = context.createShader(type);
 	context.shaderSource(shader, text);

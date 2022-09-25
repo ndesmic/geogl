@@ -1,12 +1,14 @@
 import { Mesh } from "../entity/mesh.js";
 import { cube, quadPyramid, quad, facetQuad } from "../data.js";
 import { uvSphere, facetSphere, terrianMesh } from "../lib/shape-gen.js";
-import { loadImage, bindAttribute, loadProgram, loadTexture, loadCubeMap, autoBindUniform, createTexture } from "../lib/gl-helpers.js";
+import { loadObj } from "../lib/obj-loader.js";
+import { loadImage, loadUrl, bindAttribute, loadProgram, loadTexture, loadCubeMap, autoBindUniform, createTexture } from "../lib/gl-helpers.js";
 import { getInverse, multiplyMatrix, trimMatrix, transpose, asMatrix, multiplyMatrixVector } from "../lib/vector.js";
 import { Camera } from "../entity/camera.js";
 import { Light } from "../entity/light.js";
 import { Material } from "../entity/material.js";
 import { Environment } from "../entity/environment.js";
+import { downloadBlob, downloadUrl } from "../lib/utilities.js";
 
 const degreesPerRad = 180 / Math.PI;
 
@@ -24,6 +26,7 @@ export class WcGeoGl extends HTMLElement {
 
 	//recording
 	#recording;
+	#shouldCapture;
 	#mediaRecorder;
 	#recordedChunks;
 
@@ -44,6 +47,7 @@ export class WcGeoGl extends HTMLElement {
 		element.render = element.render.bind(element);
 
 		element.toggleRecord = element.toggleRecord.bind(element);
+		element.captureScreen = element.captureScreen.bind(element);
 	}
 	async connectedCallback() {
 		this.createShadowDom();
@@ -53,7 +57,7 @@ export class WcGeoGl extends HTMLElement {
 		await this.createMaterials();
 		await this.createEnvironment();
 		this.createCameras();
-		this.createMeshes();
+		await this.createMeshes();
 		this.createLights();
 		this.renderLoop();
 	}
@@ -61,21 +65,25 @@ export class WcGeoGl extends HTMLElement {
 		this.shadow = this.attachShadow({ mode: "open" });
 		this.shadow.innerHTML = `
 				<style>
-					:host { display: block; }
+					:host { display: block; flex-flow: column nowrap; }
+					canvas { display: block; }
 				</style>
 				<canvas width="${this.#width}" height="${this.#height}"></canvas>
-				<button id="record">Record</button>
+				<button id="capture-screenshot">Screenshot</button>
+				<button id="capture-video">Record Video</button>
 			`;
 	}
 	cacheDom() {
 		this.dom = {};
 		this.dom.canvas = this.shadow.querySelector("canvas");
-		this.dom.record = this.shadow.querySelector("#record");
+		this.dom.captureVideo = this.shadow.querySelector("#capture-video");
+		this.dom.captureScreen = this.shadow.querySelector("#capture-screenshot");
 	}
 	attachEvents() {
 		document.body.addEventListener("keydown", this.onKeyDown);
 		this.dom.canvas.addEventListener("pointerdown", this.onPointerDown);
-		this.dom.record.addEventListener("click", this.toggleRecord);
+		this.dom.captureVideo.addEventListener("click", this.toggleRecord);
+		this.dom.captureScreen.addEventListener("click", this.captureScreen);
 		this.dom.canvas.addEventListener("wheel", this.onWheel);
 	}
 	async bootGpu() {
@@ -86,13 +94,20 @@ export class WcGeoGl extends HTMLElement {
 
 	//create content
 
-	createMeshes(){
+	async createMeshes(){
 		this.meshes = {
-			sphere : new Mesh({
+			teapot: new Mesh({
+				...loadObj(await loadUrl("./meshes/teapot-normal.obj"), {
+					color: [1, 0, 0],
+				}),
+				material: this.materials.pixelShaded
+			})
+			.normalizePositions()
+			//.setTranslation({ y: -0.5 })
+			/*sphere : new Mesh({
 				...uvSphere(20, { color: [1,0,0], uvScale: [4.0, 4.0]} ),
 				material: this.materials.orange
-			})
-			
+			})*/
 			/*
 			cube : new Mesh({
 				...quad,
@@ -141,9 +156,14 @@ export class WcGeoGl extends HTMLElement {
 			vertexShaded: new Material({
 				program: await loadProgram(this.context, "shaders/vertex-shaded")
 			}),
+			*/
+			colored: new Material({
+				program: await loadProgram(this.context, "shaders/colored")
+			}),
 			pixelShaded: new Material({
 				program: await loadProgram(this.context, "shaders/pixel-shaded")
 			}),
+			/*
 			pixelShadedSpecular: new Material({
 				program: await loadProgram(this.context, "shaders/pixel-shaded-blinn-phong"),
 				uniforms: {
@@ -177,15 +197,16 @@ export class WcGeoGl extends HTMLElement {
 				program: await loadProgram(this.context, "shaders/textured"),
 				textures: [await loadTexture(this.context, "./img/earth.png")]
 			}),
-			*/
 			orange: new Material({
 				program: await loadProgram(this.context, "shaders/textured"),
 				textures: [await loadTexture(this.context, "./img/orange.jpg", { wrapS: this.context.REPEAT, wrapT: this.context.REPEAT })]
 			})
+						*/
 		};
 	}
 
 	async createEnvironment() {
+		/*
 		this.environment = new Environment({
 			program: await loadProgram(this.context, "shaders/environment-map"),
 			cubemap: await loadCubeMap(this.context, [
@@ -197,6 +218,7 @@ export class WcGeoGl extends HTMLElement {
 				"./img/cubemap/tree-minus-z.png",
 			])
 		});
+		*/
 	}
 
 	//END create content
@@ -319,6 +341,11 @@ export class WcGeoGl extends HTMLElement {
 			this.setupGlobalUniforms();
 			this.context.drawArrays(this.context.TRIANGLES, 0, 3);
 		}
+
+		if(this.#shouldCapture){
+			this.#shouldCapture = false;
+			downloadUrl(this.dom.canvas.toDataURL(), "capture.png");
+		}
 	}
 
 	//Events
@@ -388,7 +415,7 @@ export class WcGeoGl extends HTMLElement {
 		this.#recording = !this.#recording;
 
 		if(this.#recording){
-			this.dom.record.textContent = "Stop";
+			this.dom.captureVideo.textContent = "Stop Recording";
 			const stream = this.dom.canvas.captureStream(25);
 			this.#mediaRecorder = new MediaRecorder(stream, {
 				mimeType: 'video/webm;codecs=vp9'
@@ -401,20 +428,19 @@ export class WcGeoGl extends HTMLElement {
 			};
 			this.#mediaRecorder.start();
 		} else {
-			this.dom.record.textContent = "Record"
+			this.dom.captureVideo.textContent = "Record Video";
 			this.#mediaRecorder.stop();
 			setTimeout(() => {
 				const blob = new Blob(this.#recordedChunks, {
 					type: "video/webm"
 				});
-				const url = URL.createObjectURL(blob);
-				const a = document.createElement("a");
-				a.href = url;
-				a.download = "recording.webm";
-				a.click();
-				URL.revokeObjectURL(url);
+				downloadBlob(blob, "recording.webm");
 			},0);
 		}
+	}
+
+	captureScreen(e){
+		this.#shouldCapture = true;
 	}
 
 	//Attrs

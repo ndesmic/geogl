@@ -89,4 +89,29 @@ export class Mesh {
 	getModelMatrix() {
 		return transpose(this.#modelMatrix).flat();
 	}
+	normalizePositions(){
+		let max = -Infinity;
+
+		for(let i = 0; i < this.#positions.length; i += 3){
+			const x = this.#positions[i];
+			const y = this.#positions[i + 1];
+			const z = this.#positions[i + 2];
+
+			if(x > max){
+				max = x;
+			}
+			if (y > max) {
+				max = y;
+			}
+			if (z > max) {
+				max = z;
+			}
+		}
+
+		for(let i = 0; i < this.#positions.length; i++){
+			this.#positions[i] /= max;
+		}
+
+		return this;
+	}
 }

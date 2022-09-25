@@ -11,8 +11,7 @@ void main() {
         //point light + color
 		mediump vec3 toLight = normalize(uLight1[0].xyz - vPosition);
 		mediump float light = dot(normalize(vNormal), toLight);
-		//gl_FragColor = vColor * uLight1[2] * vec4(light, light, light, 1);
-		gl_FragColor = vec4(vNormal, 1.0);
+		gl_FragColor = vColor * uLight1[2] * vec4(light, light, light, 1);
 	} else {
         //directional light + color
 		mediump float light = dot(normalize(vNormal), uLight1[1].xyz);
