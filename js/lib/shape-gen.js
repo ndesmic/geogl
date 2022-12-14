@@ -1,5 +1,5 @@
 import { latLngToCartesian, inverseLerp, TWO_PI, QUARTER_TURN } from "./math-helpers.js";
-import { normalizeVector, getPolygonCentroid3d } from "./vector.js";
+import { normalizeVector, getPolygonCentroid3d, getTangentVectors } from "./vector.js";
 
 export function uvSphere(density, { color, uvOffset, uvScale } = {}){
 	const radsPerUnit = Math.PI / density;
@@ -185,6 +185,7 @@ export function terrianMesh(height, width){
 	const colors = [];
 	const uvs = [];
 	const normals = [];
+	const tangents = [];
 	const triangles = [];
 	const startX = -(width / 2);
 	const startZ = -(height / 2);
@@ -193,10 +194,10 @@ export function terrianMesh(height, width){
 	for(let row = 0; row < width; row++){
 		for(let col = 0; col < height; col++){
 			positions.push(
-					startX + col, 0, startZ + row,
-					startX + 1 + col, 0, startZ + row,
-					startX + 1 + col, 0, startZ + 1 + row,
-					startX + col, 0, startZ + 1 + row
+				startX + col, 0, startZ + row,
+				startX + 1 + col, 0, startZ + row,
+				startX + 1 + col, 0, startZ + 1 + row,
+				startX + col, 0, startZ + 1 + row
 			);
 			colors.push(
 				1, 0, 0,
@@ -220,6 +221,12 @@ export function terrianMesh(height, width){
 				attributeIndex, attributeIndex + 1, attributeIndex + 2,
 				attributeIndex, attributeIndex + 2, attributeIndex + 3
 			);
+			tangents.push(
+				1, 0, 0,
+				1, 0, 0,
+				1, 0, 0,
+				1, 0, 0
+			)
 			attributeIndex += 4;
 		}
 	}
@@ -230,6 +237,7 @@ export function terrianMesh(height, width){
 		uvs,
 		normals,
 		triangles,
+		tangents,
 		textureName: "grass"
 	};
 }

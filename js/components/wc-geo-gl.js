@@ -29,6 +29,7 @@ export class WcGeoGl extends HTMLElement {
 	#shouldCapture;
 	#mediaRecorder;
 	#recordedChunks;
+	#isBackfaceCulled;
 
 	constructor() {
 		super();
@@ -44,6 +45,7 @@ export class WcGeoGl extends HTMLElement {
 		element.onPointerUp = element.onPointerUp.bind(element);
 		element.onPointerMove = element.onPointerMove.bind(element);
 		element.onWheel = element.onWheel.bind(element);
+		element.onBackfaceChange = element.onBackfaceChange.bind(element);
 		element.render = element.render.bind(element);
 
 		element.toggleRecord = element.toggleRecord.bind(element);
@@ -69,8 +71,13 @@ export class WcGeoGl extends HTMLElement {
 					canvas { display: block; }
 				</style>
 				<canvas width="${this.#width}" height="${this.#height}"></canvas>
-				<button id="capture-screenshot">Screenshot</button>
-				<button id="capture-video">Record Video</button>
+				<div class="row">
+					<button id="capture-screenshot">Screenshot</button>
+					<button id="capture-video">Record Video</button>
+				</div>
+				<div class="row">
+					<label>Backface culling:<input type="checkbox" id="chk-backface" checked></label>
+				</div>
 			`;
 	}
 	cacheDom() {
@@ -78,9 +85,11 @@ export class WcGeoGl extends HTMLElement {
 		this.dom.canvas = this.shadow.querySelector("canvas");
 		this.dom.captureVideo = this.shadow.querySelector("#capture-video");
 		this.dom.captureScreen = this.shadow.querySelector("#capture-screenshot");
+		this.dom.chkBackface = this.shadow.querySelector("#chk-backface");
 	}
 	attachEvents() {
 		document.body.addEventListener("keydown", this.onKeyDown);
+		this.dom.chkBackface.addEventListener("change", this.onBackfaceChange);
 		this.dom.canvas.addEventListener("pointerdown", this.onPointerDown);
 		this.dom.captureVideo.addEventListener("click", this.toggleRecord);
 		this.dom.captureScreen.addEventListener("click", this.captureScreen);
@@ -96,6 +105,7 @@ export class WcGeoGl extends HTMLElement {
 
 	async createMeshes(){
 		this.meshes = {
+			/*
 			teapot: new Mesh({
 				...loadObj(await loadUrl("./meshes/teapot-normal.obj"), {
 					color: [1, 0, 0],
@@ -107,26 +117,24 @@ export class WcGeoGl extends HTMLElement {
 			/*sphere : new Mesh({
 				...uvSphere(20, { color: [1,0,0], uvScale: [4.0, 4.0]} ),
 				material: this.materials.orange
-			})*/
-			/*
-			cube : new Mesh({
-				...quad,
-				material: this.materials.glossMapped
 			})
-			*/
-			
-			/*
 			mesh: new Mesh({
 				...terrianMesh(4, 4),
-				material: this.materials.vertexShaded
-			})*/
+				material: this.materials.bumpMapped
+			}).setRotation({ y: 90,  })
+
+			*/
+			quad: new Mesh({
+				...quad,
+				material: this.materials.bumpMapped
+			}).setRotation({ y : Math.PI / 4 })
 		};
 	}
 
 	createCameras(){
 		this.cameras = {
 			default: new Camera({
-				position: [0, 0, -2],
+				position: [0, 0, 2],
 				screenHeight: this.#height,
 				screenWidth: this.#width,
 				fieldOfView: 90,
@@ -141,7 +149,7 @@ export class WcGeoGl extends HTMLElement {
 		this.lights = [
 			new Light({
 				type: "point",
-				position: [0, 0, -2],
+				position: [0.0, 0, 2],
 				color: [1,1,1,1]
 			})
 		];
@@ -156,14 +164,14 @@ export class WcGeoGl extends HTMLElement {
 			vertexShaded: new Material({
 				program: await loadProgram(this.context, "shaders/vertex-shaded")
 			}),
-			*/
 			colored: new Material({
-				program: await loadProgram(this.context, "shaders/colored")
+				program: await loadProgram(this.context, "shaders/colored"),
+				name: "colored"
 			}),
 			pixelShaded: new Material({
-				program: await loadProgram(this.context, "shaders/pixel-shaded")
+				program: await loadProgram(this.context, "shaders/pixel-shaded"),
+				name: "pixel-shaded"
 			}),
-			/*
 			pixelShadedSpecular: new Material({
 				program: await loadProgram(this.context, "shaders/pixel-shaded-blinn-phong"),
 				uniforms: {
@@ -199,9 +207,18 @@ export class WcGeoGl extends HTMLElement {
 			}),
 			orange: new Material({
 				program: await loadProgram(this.context, "shaders/textured"),
-				textures: [await loadTexture(this.context, "./img/orange.jpg", { wrapS: this.context.REPEAT, wrapT: this.context.REPEAT })]
-			})
+				textures: [await loadTexture(this.context, "./img/orange.jpg", { wrapS: this.context.REPEAT, wrapT: this.context.REPEAT })],
+				name: "orange"
+			}),	
 						*/
+			bumpMapped: new Material({
+				program: await loadProgram(this.context, "shaders/bump-mapped"),
+				textures: [await loadTexture(this.context, "./img/bumpmap/bump-map.png", { wrapS: this.context.REPEAT, wrapT: this.context.REPEAT })],
+				uniforms: {
+					scale: 1.0
+				},
+				name: "bump-mapped"
+			})
 		};
 	}
 
@@ -229,6 +246,7 @@ export class WcGeoGl extends HTMLElement {
 		bindAttribute(this.context, mesh.colors, "aVertexColor", 3);
 		bindAttribute(this.context, mesh.uvs, "aVertexUV", 2);
 		bindAttribute(this.context, mesh.normals, "aVertexNormal", 3);
+		bindAttribute(this.context, mesh.tangents, "aVertexTangent", 3);
 		if(mesh.centroids){
 			bindAttribute(this.context, mesh.centroids, "aVertexCentroid", 3);
 		}
@@ -322,8 +340,13 @@ export class WcGeoGl extends HTMLElement {
 	render() {
 		this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
 
-		this.context.enable(this.context.CULL_FACE);
-		this.context.cullFace(this.context.BACK);
+		if(this.#isBackfaceCulled){
+			this.context.enable(this.context.CULL_FACE);
+			this.context.cullFace(this.context.BACK);
+		} else {
+			this.context.disable(this.context.CULL_FACE);
+		}
+
 		this.context.enable(this.context.DEPTH_TEST);
 		this.context.depthMask(true);
 
@@ -441,6 +464,10 @@ export class WcGeoGl extends HTMLElement {
 
 	captureScreen(e){
 		this.#shouldCapture = true;
+	}
+
+	onBackfaceChange(e){
+		this.#isBackfaceCulled = e.target.checked;
 	}
 
 	//Attrs

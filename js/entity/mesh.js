@@ -7,9 +7,11 @@ export class Mesh {
 	#uvs;
 	#centroids;
 	#triangles;
+	#tangents;
 	#material;
 
 	#modelMatrix = getIdentityMatrix();
+	#transforms = [];
 
 	constructor(mesh) {
 		this.positions = mesh.positions;
@@ -18,6 +20,7 @@ export class Mesh {
 		this.uvs = mesh.uvs;
 		this.centroids = mesh.centroids;
 		this.triangles = mesh.triangles;
+		this.tangents = mesh.tangents;
 		this.material = mesh.material;
 	}
 
@@ -51,6 +54,12 @@ export class Mesh {
 	get centroids(){
 		return this.#centroids;
 	}
+	set tangents(val){
+		this.#tangents = val;
+	}
+	get tangents(){
+		return this.#tangents;
+	}
 	get material() {
 		return this.#material;
 	}
@@ -68,6 +77,10 @@ export class Mesh {
 		return this;
 	}
 	setScale({ x = 1, y = 1, z = 1 }) {
+		this.#modelMatrix = multiplyMatrix(getScaleMatrix(x, y, z), this.#modelMatrix);
+		return this;
+	}
+	updateScale({ x = 1, y = 1, z = 1 }) {
 		this.#modelMatrix = multiplyMatrix(getScaleMatrix(x, y, z), this.#modelMatrix);
 		return this;
 	}

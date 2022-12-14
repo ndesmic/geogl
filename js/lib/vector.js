@@ -347,3 +347,17 @@ export function asMatrix(array, height, width){
 	}
 	return result;
 }
+
+export function getTangentVectors(points, UVs){
+	const deltaUV = [
+		subtractVector(UVs[1], UVs[0]),
+		subtractVector(UVs[2], UVs[0])
+	];
+	const deltaPositions = [
+		subtractVector(points[1], points[0]),
+		subtractVector(points[2], points[0])
+	];
+
+	const inverseDeltaUV = getInverse(deltaUV);
+	return multiplyMatrix(inverseDeltaUV, deltaPositions);
+}

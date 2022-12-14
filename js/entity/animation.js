@@ -6,7 +6,7 @@ export class Animation {
 	#duration;
 
 	constructor(animation){
-		this.#meshName = animation.meshName;
+		this.#mesh = animation.mesh;
 		this.#property = animation.property;
 		this.#from = animation.from;
 		this.#to = animation.to;
@@ -20,7 +20,7 @@ export class Animation {
 		
 		switch(this.#property){
 			case "rotate-y":
-				
+				mesh.setRotation({ y: })
 				break;
 		}
 	}
