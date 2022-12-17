@@ -147,7 +147,7 @@ export const UP = [0, 1, 0];
 export const FORWARD = [0, 0, 1];
 export const RIGHT = [1, 0, 0];
 
-///
+// polygons
 export function getVectorIntersectPlane(planePoint, planeNormal, lineStart, lineEnd) {
 	planeNormal = normalizeVector(planeNormal);
 	const planeDot = dotVector(planePoint, planeNormal);
@@ -165,6 +165,45 @@ export function getVectorIntersectPlane(planePoint, planeNormal, lineStart, line
 export function isPointInInsideSpace(point, planeNormal, planePoint) {
 	planeNormal = normalizeVector(planeNormal);
 	return dotVector(planeNormal, subtractVector(planePoint, point)) > 0;
+}
+
+//order matters! CCW from bottom to top
+export function triangleNormal(pointA, pointB, pointC) {
+	const vector1 = subtractVector(pointC, pointA);
+	const vector2 = subtractVector(pointB, pointA);
+	return normalizeVector(crossVector(vector1, vector2));
+}
+
+export function polyArea(points) {
+	let sum = 0;
+	for (let i = 0; i < points.length; i++) {
+		const nextI = (i + 1) % points.length;
+		sum += (points[i][0] * points[nextI][1]) - (points[nextI][0] * points[i][1]);
+	}
+	return Math.abs(sum) / 2;
+}
+
+export function getPolygonCentroid2d(points) {
+	const area = polyArea(points);
+
+	let sumX = 0;
+	let sumY = 0;
+	for (let i = 0; i < points.length; i++) {
+		const nextI = (i + 1) % points.length;
+		const x0 = points[i][0];
+		const x1 = points[nextI][0];
+		const y0 = points[i][1];
+		const y1 = points[nextI][1];
+
+		const doubleArea = (x0 * y1) - (x1 * y0);
+		sumX += (x0 + x1) * doubleArea;
+		sumY += (y0 + y1) * doubleArea;
+	}
+
+	const cx = sumX / (6 * area);
+	const cy = sumY / (6 * area);
+
+	return [cx, cy];
 }
 
 export function getPolygonCentroid3d(points) {
@@ -272,6 +311,7 @@ export function getDeterminantSubmatrix(matrix, row, col) {
 export function getDeterminant(matrix) {
 	let result = 0;
 
+	if(matrix.length === 1) return matrix[0][0];
 	if (matrix.length === 2 && matrix[0].length === 2) return (matrix[0][0] * matrix[1][1]) - (matrix[0][1] * matrix[1][0]);
 
 	for (let i = 0; i < matrix[0].length; i++) {
@@ -348,14 +388,14 @@ export function asMatrix(array, height, width){
 	return result;
 }
 
-export function getTangentVectors(points, UVs){
+export function getTangentVectors(trianglePositions, triangleUVs){
 	const deltaUV = [
-		subtractVector(UVs[1], UVs[0]),
-		subtractVector(UVs[2], UVs[0])
+		subtractVector(triangleUVs[1], triangleUVs[0]),
+		subtractVector(triangleUVs[2], triangleUVs[0])
 	];
 	const deltaPositions = [
-		subtractVector(points[1], points[0]),
-		subtractVector(points[2], points[0])
+		subtractVector(trianglePositions[1], trianglePositions[0]),
+		subtractVector(trianglePositions[2], trianglePositions[0])
 	];
 
 	const inverseDeltaUV = getInverse(deltaUV);

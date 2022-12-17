@@ -77,8 +77,8 @@ export function createTexture(context, image, samplerParams = {}) {
 
 	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_S, samplerParams.wrapS ?? context.CLAMP_TO_EDGE);
 	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_WRAP_T, samplerParams.wrapT ?? context.CLAMP_TO_EDGE);
-	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, context.LINEAR_MIPMAP_LINEAR);
-	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, context.LINEAR);
+	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MIN_FILTER, samplerParams.magFilter ?? context.LINEAR_MIPMAP_LINEAR);
+	context.texParameteri(context.TEXTURE_2D, context.TEXTURE_MAG_FILTER, samplerParams.minFilter ?? context.LINEAR);
 
 	return texture;
 }

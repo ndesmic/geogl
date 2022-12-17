@@ -7,8 +7,10 @@ import { getInverse, multiplyMatrix, trimMatrix, transpose, asMatrix, multiplyMa
 import { Camera } from "../entity/camera.js";
 import { Light } from "../entity/light.js";
 import { Material } from "../entity/material.js";
+import { Animation } from "../entity/animation.js";
 import { Environment } from "../entity/environment.js";
 import { downloadBlob, downloadUrl } from "../lib/utilities.js";
+import { TWO_PI } from "../lib/math-helpers.js";
 
 const degreesPerRad = 180 / Math.PI;
 
@@ -60,6 +62,7 @@ export class WcGeoGl extends HTMLElement {
 		await this.createEnvironment();
 		this.createCameras();
 		await this.createMeshes();
+		await this.createAnimations();
 		this.createLights();
 		this.renderLoop();
 	}
@@ -123,11 +126,24 @@ export class WcGeoGl extends HTMLElement {
 				material: this.materials.bumpMapped
 			}).setRotation({ y: 90,  })
 
-			*/
+
 			quad: new Mesh({
 				...quad,
 				material: this.materials.bumpMapped
-			}).setRotation({ y : Math.PI / 4 })
+			})
+			.rotate({ y : Math.PI / 4 })
+			.translate({ x: 1.0 })
+			*/
+			cube: new Mesh({
+				...cube,
+				material: this.materials.bumpMapped
+			})					
+			
+			/*
+			sphere: new Mesh({
+				...uvSphere(20),
+				material: this.materials.bumpMapped
+			})*/
 		};
 	}
 
@@ -213,9 +229,14 @@ export class WcGeoGl extends HTMLElement {
 						*/
 			bumpMapped: new Material({
 				program: await loadProgram(this.context, "shaders/bump-mapped"),
-				textures: [await loadTexture(this.context, "./img/bumpmap/bump-map.png", { wrapS: this.context.REPEAT, wrapT: this.context.REPEAT })],
+				textures: [await loadTexture(this.context, "./img/bumpmap/test2.bumpmap.png", { 
+					wrapS: this.context.CLAMP, 
+					wrapT: this.context.CLAMP, 
+					magFilter: this.context.NEAREST,
+					minFilter: this.context.NEAREST 
+				})],
 				uniforms: {
-					scale: 1.0
+					scale: 10.0
 				},
 				name: "bump-mapped"
 			})
@@ -236,6 +257,19 @@ export class WcGeoGl extends HTMLElement {
 			])
 		});
 		*/
+	}
+
+	createAnimations(){
+		this.animations = {
+			rotateCub: new Animation({
+				from: 0,
+				to: TWO_PI,
+				property: "rotate-y",
+				duration: 5000,
+				target: this.meshes.cube,
+				repeat: true
+			})
+		}
 	}
 
 	//END create content
@@ -332,12 +366,12 @@ export class WcGeoGl extends HTMLElement {
 		this.context.uniform3fv(cameraPositionLocation, Float32Array.from(cameraPosition));
 	}
 	renderLoop(){
-		requestAnimationFrame(() => {
-			this.render();
+		requestAnimationFrame((timestamp) => {
+			this.render(timestamp);
 			this.renderLoop();
 		});
 	}
-	render() {
+	render(timestamp) {
 		this.context.clear(this.context.COLOR_BUFFER_BIT | this.context.DEPTH_BUFFER_BIT);
 
 		if(this.#isBackfaceCulled){
@@ -349,6 +383,10 @@ export class WcGeoGl extends HTMLElement {
 
 		this.context.enable(this.context.DEPTH_TEST);
 		this.context.depthMask(true);
+
+		for (const animation of Object.values(this.animations)){
+			animation.run(timestamp)
+		}
 
 		for (const mesh of Object.values(this.meshes)){
 			this.bindMesh(mesh);

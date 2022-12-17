@@ -65,11 +65,26 @@ export function uvSphere(density, { color, uvOffset, uvScale } = {}){
 		}
 	}
 
+	//tangents
+	const tangents = [];
+	for(let triangle of triangles){
+		tangents.push(getTangentVectors([
+			positions[triangle[0]],
+			positions[triangle[1]],
+			positions[triangle[2]]
+		],[
+			uvs[triangle[0]],
+			uvs[triangle[1]],
+			uvs[triangle[2]],
+		])[0]);
+	}
+
 
 	return {
 		positions: positions.flat(),
 		colors: colors.flat(),
 		triangles: triangles.flat(),
+		//tangents: tangents.flat(),
 		uvs: uvs.flat(),
 		normals: positions.flat(),
 		textureName: "earth"

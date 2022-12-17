@@ -9,8 +9,6 @@ export class Mesh {
 	#triangles;
 	#tangents;
 	#material;
-
-	#modelMatrix = getIdentityMatrix();
 	#transforms = [];
 
 	constructor(mesh) {
@@ -72,35 +70,33 @@ export class Mesh {
 	get triangles() {
 		return this.#triangles;
 	}
-	setTranslation({ x = 0, y = 0, z = 0 }) {
-		this.#modelMatrix = multiplyMatrix(getTranslationMatrix(x, y, z), this.#modelMatrix);
+	translate({ x = 0, y = 0, z = 0 }) {
+		this.#transforms.push(getTranslationMatrix(x, y ,z));
 		return this;
 	}
-	setScale({ x = 1, y = 1, z = 1 }) {
-		this.#modelMatrix = multiplyMatrix(getScaleMatrix(x, y, z), this.#modelMatrix);
+	scale({ x = 1, y = 1, z = 1 }) {
+		this.#transforms.push(getScaleMatrix(x, y, z));
 		return this;
 	}
-	updateScale({ x = 1, y = 1, z = 1 }) {
-		this.#modelMatrix = multiplyMatrix(getScaleMatrix(x, y, z), this.#modelMatrix);
-		return this;
-	}
-	setRotation({ x, y, z }) {
+	rotate({ x, y, z }) {
+		//there's an order dependency here... something something quaterions...
 		if (x) {
-			this.#modelMatrix = multiplyMatrix(getRotationXMatrix(x), this.#modelMatrix);
+			this.#transforms.push(getRotationXMatrix(x));
 		}
 		if (y) {
-			this.#modelMatrix = multiplyMatrix(getRotationYMatrix(y), this.#modelMatrix);
+			this.#transforms.push(getRotationYMatrix(y));
 		}
 		if (z) {
-			this.#modelMatrix = multiplyMatrix(getRotationZMatrix(z), this.#modelMatrix);
+			this.#transforms.push(getRotationZMatrix(z));
 		}
 		return this;
 	}
 	resetTransforms() {
-		this.#modelMatrix = getIdentityMatrix();
+		this.#transforms = [];
 	}
 	getModelMatrix() {
-		return transpose(this.#modelMatrix).flat();
+		const modelMatrix = this.#transforms.reduce((mm, tm) => multiplyMatrix(tm, mm), getIdentityMatrix());
+		return transpose(modelMatrix).flat();
 	}
 	normalizePositions(){
 		let max = -Infinity;

@@ -1,27 +1,38 @@
 export class Animation {
-	#meshName;
+	#target;
 	#property;
 	#from;
 	#to;
 	#duration;
+	#firstTimestamp;
+	#repeat;
 
 	constructor(animation){
-		this.#mesh = animation.mesh;
+		this.#target = animation.target;
 		this.#property = animation.property;
 		this.#from = animation.from;
 		this.#to = animation.to;
-		this.#duration = animation.#duration;
+		this.#duration = animation.duration;
+		this.#repeat = animation.repeat;
 	}
-
-	run(ticks){
-		const unitsPerTick = (this.#to - this.#from) / this.#duration;
-		const ticksInAnimation =  ticks % this.#duration;
-		const unitsToAnimate = unitsPerTick * ticks;
+	run(timestamp){
+		if(!this.#firstTimestamp){
+			this.#firstTimestamp = timestamp;
+		}
+		const elapsedTime = timestamp - this.#firstTimestamp;
+		const animationRatio = this.#repeat
+			? (elapsedTime % this.#duration) / this.#duration
+			: Math.min(elapsedTime, this.#duration) / this.#duration
 		
+		const length = this.#to - this.#from;
+		
+		this.#target.resetTransforms();
+
 		switch(this.#property){
-			case "rotate-y":
-				mesh.setRotation({ y: })
+			case "rotate-y": {
+				this.#target.rotate({ y: this.#from + (animationRatio * length)  })
 				break;
+			}
 		}
 	}
 }
