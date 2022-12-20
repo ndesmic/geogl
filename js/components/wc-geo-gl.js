@@ -100,8 +100,8 @@ export class WcGeoGl extends HTMLElement {
 	}
 	async bootGpu() {
 		this.context = this.dom.canvas.getContext("webgl2");
-		this.context.clearColor(0, 0.5, 0.0, 1);
-		//this.context.pixelStorei(this.context.UNPACK_FLIP_Y_WEBGL, true);
+		this.context.clearColor(0.7, 0.7, 0.7, 1);
+		this.context.pixelStorei(this.context.UNPACK_FLIP_Y_WEBGL, true);
 	}
 
 	//create content
@@ -136,8 +136,8 @@ export class WcGeoGl extends HTMLElement {
 			*/
 			cube: new Mesh({
 				...cube,
-				material: this.materials.bumpMapped
-			})					
+				material: this.materials.normalMapped
+			}).rotate({ y: Math.PI / 4 })		
 			
 			/*
 			sphere: new Mesh({
@@ -226,7 +226,6 @@ export class WcGeoGl extends HTMLElement {
 				textures: [await loadTexture(this.context, "./img/orange.jpg", { wrapS: this.context.REPEAT, wrapT: this.context.REPEAT })],
 				name: "orange"
 			}),	
-						*/
 			bumpMapped: new Material({
 				program: await loadProgram(this.context, "shaders/bump-mapped"),
 				textures: [await loadTexture(this.context, "./img/bumpmap/test2.bumpmap.png", { 
@@ -239,6 +238,15 @@ export class WcGeoGl extends HTMLElement {
 					scale: 10.0
 				},
 				name: "bump-mapped"
+			}),
+			*/
+			normalMapped: new Material({
+				program: await loadProgram(this.context, "shaders/normal-mapped"),
+				textures: [
+					await loadTexture(this.context, "./img/slimewall.png"),
+					await loadTexture(this.context, "./img/normalmap/slimewall.normalmap.png")
+				],
+				name: "normal-mapped"
 			})
 		};
 	}
@@ -261,7 +269,7 @@ export class WcGeoGl extends HTMLElement {
 
 	createAnimations(){
 		this.animations = {
-			rotateCub: new Animation({
+			rotateCube: new Animation({
 				from: 0,
 				to: TWO_PI,
 				property: "rotate-y",
